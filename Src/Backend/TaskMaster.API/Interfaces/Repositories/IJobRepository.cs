@@ -1,11 +1,11 @@
-﻿using TaskMaster.Entities;
+﻿using TaskMaster.API.Entities;
 
-namespace TaskMaster.Interfaces.Repositories
+namespace TaskMaster.API.Interfaces.Repositories
 {
     public interface IJobRepository
     {
         Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId);
-        Task<int> UnassignJobForWorkerId(long workerId);
+        Task<int> UnassignJobForWorkerIdAsync(long workerId);
         Task<Job?> GetNextJobForWorkerAsync(long workerId);
     }
 }

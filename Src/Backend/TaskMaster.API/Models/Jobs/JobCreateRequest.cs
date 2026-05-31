@@ -1,10 +1,11 @@
-﻿using TaskMaster.Enums;
+﻿using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Enums;
 
-namespace TaskMaster.Models.Jobs
+namespace TaskMaster.API.Models.Jobs
 {
     public class JobCreateRequest
     {
-        public string JobType { get; set; } = string.Empty;
+        public JobTypeDetails JobType { get; set; } = JobTypeDetails.Empty;
         public string Payload { get; set; } = string.Empty;
     }
 }

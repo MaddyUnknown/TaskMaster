@@ -1,16 +1,15 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using TaskMaster.Enums;
-using TaskMaster.Entities;
-using TaskMaster.Interfaces.Data;
-using TaskMaster.Interfaces.Repositories;
-using TaskMaster.Interfaces.Services;
-using TaskMaster.Mappers;
-using TaskMaster.Models.Workers;
-using TaskMaster.API.Enums;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using TaskMaster.API.Configs;
+using TaskMaster.API.Entities;
+using TaskMaster.API.Enums;
+using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Mappers;
+using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Services
+namespace TaskMaster.API.Services
 {
     public class WorkerService : IWorkerService
     {
@@ -20,20 +19,25 @@ namespace TaskMaster.Services
         private IRepository<Worker> _workerCRUDRepository;
         private IWorkerRepository _workerRepository;
         private IJobRepository _jobRepository;
+        private IJobTypeRepository _jobTypeRepository;
         
-        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IOptions<WorkerConfig> workerConfigOption)
+        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IJobTypeRepository jobTypeRepository, IOptions<WorkerConfig> workerConfigOption)
         {
             _unitOfWork = unitOfWork;
             _workerCRUDRepository = workerCRUDRepository;
             _workerRepository = workerRepository;
             _jobRepository = jobRepository;
+            _jobTypeRepository = jobTypeRepository;
 
             _workerConfigOption = workerConfigOption;
         }
 
         public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorkerRequest registerWorker)
         {
-            var worker = registerWorker.ToWorker();
+            var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
+            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new Exception();
+
+            var worker = registerWorker.ToWorker(jobTypes);
             _workerCRUDRepository.Add(worker);
             await _unitOfWork.SaveAsync();
 
@@ -53,7 +57,7 @@ namespace TaskMaster.Services
                 _workerCRUDRepository.Update(worker);
                 await _unitOfWork.SaveAsync();
 
-                await _jobRepository.UnassignJobForWorkerId(worker.Id);
+                await _jobRepository.UnassignJobForWorkerIdAsync(worker.Id);
                 await _unitOfWork.SaveAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
@@ -72,9 +76,12 @@ namespace TaskMaster.Services
 
             try
             {
-                var worker = await _workerRepository.UpdateWorkerExpiryTimestampAsync(workerId, _workerConfigOption.Value.WorkerExpiryIntervalSeconds);
-
+                var rowsAffected = await _workerRepository.UpdateWorkerExpiryTimestampAsync(workerId, _workerConfigOption.Value.WorkerExpiryIntervalSeconds);
                 await _unitOfWork.SaveAsync();
+
+                Worker? worker = null;
+                if(rowsAffected != 0 ) worker = await _workerRepository.GetByPublicIdAsync(workerId);
+
                 await _unitOfWork.CommitTransactionAsync();
 
                 return new ActionStatusResponse

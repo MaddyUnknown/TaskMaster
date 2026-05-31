@@ -1,9 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using TaskMaster.Interfaces.Services;
-using TaskMaster.Models.Workers;
+using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Controllers
+namespace TaskMaster.API.Controllers
 {
     [ApiController]
     [Route("api/workers")]

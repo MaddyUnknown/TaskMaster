@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.Models.Workers
+﻿namespace TaskMaster.API.Models.Workers
 {
     public class WorkerIdRef
     {

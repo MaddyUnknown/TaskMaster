@@ -1,34 +1,37 @@
-﻿using System.Threading.Tasks;
+﻿using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
-using TaskMaster.Entities;
-using TaskMaster.Enums;
-using TaskMaster.Interfaces.Data;
-using TaskMaster.Interfaces.Repositories;
-using TaskMaster.Interfaces.Services;
-using TaskMaster.Mappers;
-using TaskMaster.Models.Jobs;
-using TaskMaster.Models.Workers;
+using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Mappers;
+using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Services
+namespace TaskMaster.API.Services
 {
     public class JobService : IJobService
     {
         private IUnitOfWork _unitOfWork;
         private IJobRepository _jobRepository;
+        private IJobTypeRepository _jobTypeRepository;
         private IRepository<Job> _jobCRUDRepository;
         private IWorkerRepository _workerRepository;
 
-        public JobService(IUnitOfWork unitOfWork, IRepository<Job> jobCRUDRepository, IJobRepository jobRepository, IWorkerRepository workerRepository)
+        public JobService(IUnitOfWork unitOfWork, IRepository<Job> jobCRUDRepository, IJobTypeRepository jobTypeRepository, IJobRepository jobRepository, IWorkerRepository workerRepository)
         {
             _unitOfWork = unitOfWork;
             _jobRepository = jobRepository;
+            _jobTypeRepository = jobTypeRepository;
             _jobCRUDRepository = jobCRUDRepository;
             _workerRepository = workerRepository;
         }
 
         public async Task<JobDetails> CreateAsync(JobCreateRequest job)
         {
-            var jobEntity = job.ToJob();
+            var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(job.JobType.Name, job.JobType.Version);
+            if (jobTypeEntity == null) throw new Exception();
+
+            var jobEntity = job.ToJob(jobTypeEntity);
             
             _jobCRUDRepository.Add(jobEntity);
             await _unitOfWork.SaveAsync();

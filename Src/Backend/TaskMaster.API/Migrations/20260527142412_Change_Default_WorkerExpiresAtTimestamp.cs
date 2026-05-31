@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace TaskMaster.Migrations
+namespace TaskMaster.API.Migrations
 {
     /// <inheritdoc />
     public partial class Change_Default_WorkerExpiresAtTimestamp : Migration

@@ -1,9 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using TaskMaster.Data;
-using TaskMaster.Entities;
-using TaskMaster.Interfaces.Repositories;
+using TaskMaster.API.Data;
+using TaskMaster.API.Entities;
+using TaskMaster.API.Interfaces.Repositories;
 
-namespace TaskMaster.Repositories
+namespace TaskMaster.API.Repositories
 {
     public class WorkerRepository : IWorkerRepository
     {
@@ -15,10 +15,10 @@ namespace TaskMaster.Repositories
 
         public async Task<Worker?> GetByPublicIdAsync(Guid workerPublicId)
         {
-            return await _context.Workers.Include(w => w.JobTypeCapabilities).Where(w => w.WorkerPublicId == workerPublicId).FirstOrDefaultAsync();
+            return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).Where(w => w.WorkerPublicId == workerPublicId).FirstOrDefaultAsync();
         }
 
-        public async Task<Worker?> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
+        public async Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
             FormattableString sql = $@"
                 UPDATE Workers
@@ -27,13 +27,7 @@ namespace TaskMaster.Repositories
                 AND WorkerExpiresAtTimestamp > SYSDATETIME()
             ";
 
-            var count = await _context.Database.ExecuteSqlInterpolatedAsync(sql);
-
-            if (count == 0) return null;
-
-            return await _context.Workers
-                .Include(w => w.JobTypeCapabilities)
-                .FirstOrDefaultAsync(w => w.WorkerPublicId == workerPublicId);
+            return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
         }
     }
 }

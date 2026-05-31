@@ -1,8 +1,8 @@
-﻿using TaskMaster.Enums;
-using TaskMaster.Models.Jobs;
-using TaskMaster.Models.Workers;
+﻿using TaskMaster.API.Enums;
+using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Interfaces.Services
+namespace TaskMaster.API.Interfaces.Services
 {
     public interface IJobService
     {

@@ -1,11 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using TaskMaster.API.Data;
+using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
-using TaskMaster.Data;
-using TaskMaster.Entities;
-using TaskMaster.Enums;
-using TaskMaster.Interfaces.Repositories;
+using TaskMaster.API.Interfaces.Repositories;
 
-namespace TaskMaster.Repositories
+namespace TaskMaster.API.Repositories
 {
     public class JobRepository : IJobRepository
     {
@@ -20,10 +19,10 @@ namespace TaskMaster.Repositories
             var workerId = await _context.Workers.Where(w => w.WorkerPublicId == workerPublicId).Select(w => w.Id).FirstOrDefaultAsync();
             if (workerId == 0) return null;
 
-            return await _context.Jobs.Where(j => j.JobPublicId == jobPublicId && j.AssignedWorkerId == workerId).FirstOrDefaultAsync();
+            return await _context.Jobs.Include(j => j.JobType).Where(j => j.JobPublicId == jobPublicId && j.AssignedWorkerId == workerId).FirstOrDefaultAsync();
         }
 
-        public async Task<int> UnassignJobForWorkerId(long workerId)
+        public async Task<int> UnassignJobForWorkerIdAsync(long workerId)
         {
             FormattableString sql = $@"
                 UPDATE Jobs SET
@@ -39,31 +38,29 @@ namespace TaskMaster.Repositories
         public async Task<Job?> GetNextJobForWorkerAsync(long workerId)
         {
             FormattableString sql = $@"
-                DECLARE @ClaimedJob TABLE
-                (
-                    Id INT
-                );
-
                 WITH cte AS
                 (
                     SELECT TOP 1 j.*
                     FROM Workers w
-                    INNER JOIN WorkerCapabalities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp > SYSDATETIME() AND Status = {WorkerStatusEnum.Active}
-                    INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobType = wc.JobType
+                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp > SYSDATETIME() AND Status = {WorkerStatusEnum.Active}
+                    INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobTypeId = wc.JobTypeId
                     WHERE j.Status = {JobStatusEnum.Queued}
                     ORDER BY j.Id
                 )
                 UPDATE cte
                 SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = {workerId}, ModifyDateTime = {DateTime.Now}
-                OUTPUT inserted.Id INTO @ClaimedJob;
-
-                SELECT j.* 
-                FROM Jobs j
-                INNER JOIN @ClaimedJob c ON j.Id = c.Id;
+                OUTPUT inserted.*;
             ";
 
             var jobs = await _context.Jobs.FromSqlInterpolated(sql).ToListAsync();
-            return jobs.FirstOrDefault();
+            var job = jobs.FirstOrDefault();
+
+            if(job != null)
+            {
+                await _context.Entry(job).Reference(j => j.JobType).LoadAsync();
+            }
+
+            return job;
         }
     }
 }

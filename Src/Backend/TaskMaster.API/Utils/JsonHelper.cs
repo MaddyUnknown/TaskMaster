@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace TaskMaster.Utils
+namespace TaskMaster.API.Utils
 {
     public static class JsonHelper
     {

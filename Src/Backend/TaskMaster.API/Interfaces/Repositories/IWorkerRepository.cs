@@ -1,10 +1,10 @@
-﻿using TaskMaster.Entities;
+﻿using TaskMaster.API.Entities;
 
-namespace TaskMaster.Interfaces.Repositories
+namespace TaskMaster.API.Interfaces.Repositories
 {
     public interface IWorkerRepository
     {
         Task<Worker?> GetByPublicIdAsync(Guid workerPublicId);
-        Task<Worker?> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds);
+        Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds);
     }
 }

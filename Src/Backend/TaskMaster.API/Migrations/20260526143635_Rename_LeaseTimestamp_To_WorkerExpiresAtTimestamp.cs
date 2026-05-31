@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace TaskMaster.Migrations
+namespace TaskMaster.API.Migrations
 {
     /// <inheritdoc />
     public partial class Rename_LeaseTimestamp_To_WorkerExpiresAtTimestamp : Migration

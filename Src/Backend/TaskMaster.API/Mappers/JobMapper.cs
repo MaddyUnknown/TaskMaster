@@ -1,17 +1,17 @@
-﻿using TaskMaster.Entities;
-using TaskMaster.Enums;
-using TaskMaster.Models.Jobs;
+﻿using TaskMaster.API.Entities;
+using TaskMaster.API.Enums;
+using TaskMaster.API.Models.Jobs;
 
-namespace TaskMaster.Mappers
+namespace TaskMaster.API.Mappers
 {
     public static class JobMapper
     {
-        public static Job ToJob(this JobCreateRequest jobCreateRequest)
+        public static Job ToJob(this JobCreateRequest jobCreateRequest, JobType jobType)
         {
             return new Job
             {
                 JobPublicId = Guid.NewGuid(),
-                JobType = jobCreateRequest.JobType,
+                JobType = jobType,
                 Payload = jobCreateRequest.Payload,
                 Status = JobStatusEnum.Queued,
             };
@@ -22,7 +22,7 @@ namespace TaskMaster.Mappers
             return new JobDetails
             {
                 JobId = jobEntity.JobPublicId,
-                JobType = jobEntity.JobType,
+                JobType = (jobEntity.JobType == null) ? JobTypeDetails.Empty : new JobTypeDetails { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
                 Payload = jobEntity.Payload,
                 Status = jobEntity.Status
             };

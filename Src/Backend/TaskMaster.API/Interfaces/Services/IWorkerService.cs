@@ -1,6 +1,6 @@
-﻿using TaskMaster.Models.Workers;
+﻿using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Interfaces.Services
+namespace TaskMaster.API.Interfaces.Services
 {
     public interface IWorkerService
     {

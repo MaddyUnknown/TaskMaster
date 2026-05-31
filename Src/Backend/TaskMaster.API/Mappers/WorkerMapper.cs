@@ -1,18 +1,19 @@
-﻿using TaskMaster.Entities;
-using TaskMaster.Models.Workers;
+﻿using TaskMaster.API.Entities;
+using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Models.Jobs;
 
-namespace TaskMaster.Mappers
+namespace TaskMaster.API.Mappers
 {
     public static class WorkerMapper
     {
-        public static Worker ToWorker(this RegisterWorkerRequest request)
+        public static Worker ToWorker(this RegisterWorkerRequest request, IEnumerable<JobType> jobTypes)
         {
             return new Worker
             {
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = request.WorkerName,
-                JobTypeCapabilities = request.JobTypeCapabilities.Select(c => new WorkerCapabality { JobType = c }).ToList(),
+                WorkerCapabilities = jobTypes.Select(t => new WorkerCapability { JobType = t }).ToList(),
                 Status = WorkerStatusEnum.Active,
             };
         }
@@ -24,7 +25,7 @@ namespace TaskMaster.Mappers
                 WorkerId = worker.WorkerPublicId,
                 WorkerName = worker.WorkerName,
                 Status = worker.Status,
-                JobTypeCapabilities = worker.JobTypeCapabilities.Select(w => w.JobType).ToArray()
+                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new JobTypeDetails { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
             };
         }
         

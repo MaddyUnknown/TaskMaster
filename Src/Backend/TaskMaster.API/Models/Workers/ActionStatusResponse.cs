@@ -1,6 +1,6 @@
-﻿using TaskMaster.Enums;
+﻿using TaskMaster.API.Enums;
 
-namespace TaskMaster.Models.Workers
+namespace TaskMaster.API.Models.Workers
 {
     public class ActionStatusResponse
     {

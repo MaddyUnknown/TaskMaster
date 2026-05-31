@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.Interfaces.Data
+﻿namespace TaskMaster.API.Interfaces.Data
 {
     public interface IUnitOfWork
     {

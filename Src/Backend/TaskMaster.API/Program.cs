@@ -1,19 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
-using System.Runtime;
 using System.Text.Json.Serialization;
 using TaskMaster.API.Data;
-using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Configs;
-using TaskMaster.Data;
-using TaskMaster.Entities;
-using TaskMaster.Interfaces.Data;
-using TaskMaster.Interfaces.Repositories;
-using TaskMaster.Interfaces.Services;
-using TaskMaster.Repositories;
-using TaskMaster.Services;
+using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Repositories;
+using TaskMaster.API.Services;
 
-namespace TaskMaster
+namespace TaskMaster.API
 {
     public class Program
     {
@@ -53,6 +49,7 @@ namespace TaskMaster
             builder.Services.AddTransient(typeof(IRepository<>), typeof(Repository<>));
             builder.Services.AddTransient<IJobRepository, JobRepository>();
             builder.Services.AddTransient<IWorkerRepository, WorkerRepository>();
+            builder.Services.AddTransient<IJobTypeRepository, JobTypeRepository>();
 
             builder.Services.AddTransient<IJobService, JobService>();
             builder.Services.AddTransient<IWorkerService, WorkerService>();

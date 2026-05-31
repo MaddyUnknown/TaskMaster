@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore.Storage;
-using TaskMaster.Interfaces.Data;
+using TaskMaster.API.Interfaces.Data;
 
-namespace TaskMaster.Data
+namespace TaskMaster.API.Data
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {

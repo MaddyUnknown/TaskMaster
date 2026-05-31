@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TaskMaster.Data;
+using TaskMaster.API.Data;
 
 #nullable disable
 
-namespace TaskMaster.Migrations
+namespace TaskMaster.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     partial class ApplicationDbContextModelSnapshot : ModelSnapshot
@@ -22,7 +22,7 @@ namespace TaskMaster.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("TaskMaster.Entities.Job", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.Job", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -39,14 +39,14 @@ namespace TaskMaster.Migrations
                     b.Property<Guid>("JobPublicId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<long>("JobTypeId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ModifyDateTime")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Payload")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("Status")
@@ -56,10 +56,48 @@ namespace TaskMaster.Migrations
 
                     b.HasIndex("AssignedWorkerId");
 
+                    b.HasIndex("JobPublicId")
+                        .IsUnique();
+
+                    b.HasIndex("JobTypeId");
+
                     b.ToTable("Jobs");
                 });
 
-            modelBuilder.Entity("TaskMaster.Entities.Worker", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.JobType", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("ModifyDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("Schema")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<long>("Version")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name", "Version")
+                        .IsUnique();
+
+                    b.ToTable("JobTypes");
+                });
+
+            modelBuilder.Entity("TaskMaster.API.Entities.Worker", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -90,10 +128,13 @@ namespace TaskMaster.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("WorkerPublicId")
+                        .IsUnique();
+
                     b.ToTable("Workers");
                 });
 
-            modelBuilder.Entity("TaskMaster.Entities.WorkerCapabality", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.WorkerCapability", b =>
                 {
                     b.Property<long>("Id")
                         .ValueGeneratedOnAdd()
@@ -104,9 +145,8 @@ namespace TaskMaster.Migrations
                     b.Property<DateTime>("CreatedDateTime")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("JobType")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<long>("JobTypeId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ModifyDateTime")
                         .HasColumnType("datetime2");
@@ -116,32 +156,51 @@ namespace TaskMaster.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("WorkerId");
+                    b.HasIndex("JobTypeId");
 
-                    b.ToTable("WorkerCapabalities");
+                    b.HasIndex("WorkerId", "JobTypeId")
+                        .IsUnique();
+
+                    b.ToTable("WorkerCapabilities");
                 });
 
-            modelBuilder.Entity("TaskMaster.Entities.Job", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.Job", b =>
                 {
-                    b.HasOne("TaskMaster.Entities.Worker", null)
+                    b.HasOne("TaskMaster.API.Entities.Worker", null)
                         .WithMany("AssignedJobs")
                         .HasForeignKey("AssignedWorkerId");
+
+                    b.HasOne("TaskMaster.API.Entities.JobType", "JobType")
+                        .WithMany()
+                        .HasForeignKey("JobTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("JobType");
                 });
 
-            modelBuilder.Entity("TaskMaster.Entities.WorkerCapabality", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.WorkerCapability", b =>
                 {
-                    b.HasOne("TaskMaster.Entities.Worker", null)
-                        .WithMany("JobTypeCapabilities")
+                    b.HasOne("TaskMaster.API.Entities.JobType", "JobType")
+                        .WithMany()
+                        .HasForeignKey("JobTypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("TaskMaster.API.Entities.Worker", null)
+                        .WithMany("WorkerCapabilities")
                         .HasForeignKey("WorkerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("JobType");
                 });
 
-            modelBuilder.Entity("TaskMaster.Entities.Worker", b =>
+            modelBuilder.Entity("TaskMaster.API.Entities.Worker", b =>
                 {
                     b.Navigation("AssignedJobs");
 
-                    b.Navigation("JobTypeCapabilities");
+                    b.Navigation("WorkerCapabilities");
                 });
 #pragma warning restore 612, 618
         }

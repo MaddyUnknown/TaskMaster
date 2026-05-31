@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.Interfaces.Repositories
+﻿namespace TaskMaster.API.Interfaces.Repositories
 {
     public interface IRepository<T>
     {

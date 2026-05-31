@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Interfaces.Data;
-using TaskMaster.Entities.Abstractions;
+using TaskMaster.API.Entities.Abstractions;
 
 namespace TaskMaster.API.Data
 {

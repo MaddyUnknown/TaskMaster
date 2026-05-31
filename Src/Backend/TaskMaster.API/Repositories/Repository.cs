@@ -1,8 +1,8 @@
-﻿using TaskMaster.Data;
-using TaskMaster.Entities.Abstractions;
-using TaskMaster.Interfaces.Repositories;
+﻿using TaskMaster.API.Data;
+using TaskMaster.API.Entities.Abstractions;
+using TaskMaster.API.Interfaces.Repositories;
 
-namespace TaskMaster.Repositories
+namespace TaskMaster.API.Repositories
 {
     public class Repository<T> : IRepository<T> where T : BaseEntity
     {

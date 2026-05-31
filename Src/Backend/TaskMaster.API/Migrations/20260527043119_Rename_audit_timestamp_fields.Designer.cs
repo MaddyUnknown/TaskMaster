@@ -5,11 +5,11 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TaskMaster.Data;
+using TaskMaster.API.Data;
 
 #nullable disable
 
-namespace TaskMaster.Migrations
+namespace TaskMaster.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
     [Migration("20260527043119_Rename_audit_timestamp_fields")]

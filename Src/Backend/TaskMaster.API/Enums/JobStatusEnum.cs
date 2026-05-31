@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.Enums
+﻿namespace TaskMaster.API.Enums
 {
     public enum JobStatusEnum
     {

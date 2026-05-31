@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.Entities.Abstractions
+﻿namespace TaskMaster.API.Entities.Abstractions
 {
     public class BaseEntity
     {

@@ -1,11 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using System.Threading.Tasks;
-using TaskMaster.Enums;
-using TaskMaster.Interfaces.Services;
-using TaskMaster.Models.Jobs;
-using TaskMaster.Models.Workers;
+using TaskMaster.API.Enums;
+using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.Workers;
 
-namespace TaskMaster.Controllers
+namespace TaskMaster.API.Controllers
 {
     [ApiController]
     [Route("api/jobs")]

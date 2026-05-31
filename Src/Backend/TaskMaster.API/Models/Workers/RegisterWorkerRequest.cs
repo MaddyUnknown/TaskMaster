@@ -1,8 +1,10 @@
-﻿namespace TaskMaster.Models.Workers
+﻿using TaskMaster.API.Models.Jobs;
+
+namespace TaskMaster.API.Models.Workers
 {
     public class RegisterWorkerRequest
     {
         public string WorkerName { get; set; } = string.Empty;
-        public string[] JobTypeCapabilities { get; set; } = Array.Empty<string>();
+        public IEnumerable<JobTypeDetails> JobTypeCapabilities { get; set; } = Enumerable.Empty<JobTypeDetails>();
     }
 }
