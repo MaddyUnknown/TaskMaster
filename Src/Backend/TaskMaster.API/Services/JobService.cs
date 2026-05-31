@@ -26,7 +26,7 @@ namespace TaskMaster.API.Services
             _workerRepository = workerRepository;
         }
 
-        public async Task<JobDetails> CreateAsync(JobCreateRequest job)
+        public async Task<JobDetails> CreateAsync(CreateJob job)
         {
             var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(job.JobType.Name, job.JobType.Version);
             if (jobTypeEntity == null) throw new Exception();

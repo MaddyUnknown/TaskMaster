@@ -2,7 +2,7 @@
 
 namespace TaskMaster.API.Models.Workers
 {
-    public class ActionStatusResponse
+    public class HeartbeatActionStatus
     {
         public ActionStatusEnum ActionStatus { get; set; }
     }

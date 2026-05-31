@@ -2,12 +2,13 @@
 using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Mappers
 {
     public static class WorkerMapper
     {
-        public static Worker ToWorker(this RegisterWorkerRequest request, IEnumerable<JobType> jobTypes)
+        public static Worker ToWorker(this RegisterWorker request, IEnumerable<JobType> jobTypes)
         {
             return new Worker
             {
@@ -25,7 +26,7 @@ namespace TaskMaster.API.Mappers
                 WorkerId = worker.WorkerPublicId,
                 WorkerName = worker.WorkerName,
                 Status = worker.Status,
-                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new JobTypeDetails { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
+                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new GetJobType { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
             };
         }
         

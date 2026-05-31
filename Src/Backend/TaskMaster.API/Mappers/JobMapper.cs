@@ -1,12 +1,13 @@
 ﻿using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Mappers
 {
     public static class JobMapper
     {
-        public static Job ToJob(this JobCreateRequest jobCreateRequest, JobType jobType)
+        public static Job ToJob(this CreateJob jobCreateRequest, JobType jobType)
         {
             return new Job
             {
@@ -22,7 +23,7 @@ namespace TaskMaster.API.Mappers
             return new JobDetails
             {
                 JobId = jobEntity.JobPublicId,
-                JobType = (jobEntity.JobType == null) ? JobTypeDetails.Empty : new JobTypeDetails { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
+                JobType = (jobEntity.JobType == null) ? GetJobType.Empty : new GetJobType { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
                 Payload = jobEntity.Payload,
                 Status = jobEntity.Status
             };

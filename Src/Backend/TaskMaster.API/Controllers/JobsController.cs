@@ -40,7 +40,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("")]
-        public async Task<ActionResult<JobDetails>> Create(JobCreateRequest jobCreateRequest)
+        public async Task<ActionResult<JobDetails>> Create(CreateJob jobCreateRequest)
         {
             var job = await _jobService.CreateAsync(jobCreateRequest);
             return Ok(job);

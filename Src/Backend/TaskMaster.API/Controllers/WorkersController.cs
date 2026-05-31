@@ -18,7 +18,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("register")]
-        public async Task<ActionResult<RegisterWorkerResponse>> Register(RegisterWorkerRequest registerWorker)
+        public async Task<ActionResult<RegisterWorkerResponse>> Register(RegisterWorker registerWorker)
         {
             var worker = await _workerService.RegisterAsync(registerWorker);
             return Ok(worker);
@@ -32,7 +32,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("{workerId}/heartbeat")]
-        public async Task<ActionResult<ActionStatusResponse>> HeartBeat(Guid workerId)
+        public async Task<ActionResult<HeartbeatActionStatus>> HeartBeat(Guid workerId)
         {
             try
             {

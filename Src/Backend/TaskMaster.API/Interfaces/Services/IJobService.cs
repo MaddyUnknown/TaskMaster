@@ -6,7 +6,7 @@ namespace TaskMaster.API.Interfaces.Services
 {
     public interface IJobService
     {
-        Task<JobDetails> CreateAsync(JobCreateRequest job);
+        Task<JobDetails> CreateAsync(CreateJob job);
         Task<JobDetails> ChangeJobStatusAsync(Guid jobId, JobStatusEnum status, WorkerIdRef workerIdRef);
         Task<JobDetails?> GetNextWorkerJobsAsync(Guid workerId);
     }

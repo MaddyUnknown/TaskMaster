@@ -4,8 +4,8 @@ namespace TaskMaster.API.Interfaces.Services
 {
     public interface IWorkerService
     {
-        Task<RegisterWorkerResponse> RegisterAsync(RegisterWorkerRequest registerWorker);
+        Task<RegisterWorkerResponse> RegisterAsync(RegisterWorker registerWorker);
         Task<WorkerDetails> RemoveAsync(Guid workerId);
-        Task<ActionStatusResponse> HeartBeatAsync(Guid workerId);
+        Task<HeartbeatActionStatus> HeartBeatAsync(Guid workerId);
     }
 }

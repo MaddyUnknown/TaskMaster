@@ -42,6 +42,10 @@ namespace TaskMaster.API.Data
 
             // Worker Setup
             modelBuilder.Entity<Worker>()
+                .HasIndex(w => w.WorkerName)
+                .IsUnique();
+
+            modelBuilder.Entity<Worker>()
                 .HasIndex(w => new { w.WorkerPublicId })
                 .IsUnique();
 

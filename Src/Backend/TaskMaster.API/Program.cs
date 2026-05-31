@@ -52,6 +52,7 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IJobTypeRepository, JobTypeRepository>();
 
             builder.Services.AddTransient<IJobService, JobService>();
+            builder.Services.AddTransient<IJobTypeService, JobTypeService>();
             builder.Services.AddTransient<IWorkerService, WorkerService>();
 
             // Swagger services

@@ -32,7 +32,7 @@ namespace TaskMaster.API.Services
             _workerConfigOption = workerConfigOption;
         }
 
-        public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorkerRequest registerWorker)
+        public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorker registerWorker)
         {
             var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
             if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new Exception();
@@ -70,7 +70,7 @@ namespace TaskMaster.API.Services
             }
         }
 
-        public async Task<ActionStatusResponse> HeartBeatAsync(Guid workerId)
+        public async Task<HeartbeatActionStatus> HeartBeatAsync(Guid workerId)
         {
             await _unitOfWork.BeginTransactionAsync();
 
@@ -84,7 +84,7 @@ namespace TaskMaster.API.Services
 
                 await _unitOfWork.CommitTransactionAsync();
 
-                return new ActionStatusResponse
+                return new HeartbeatActionStatus
                 {
                     ActionStatus = worker == null ? ActionStatusEnum.Failed : ActionStatusEnum.Ok
                 };

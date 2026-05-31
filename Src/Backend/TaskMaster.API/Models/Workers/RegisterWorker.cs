@@ -1,13 +1,10 @@
-﻿using TaskMaster.API.Enums;
-using TaskMaster.API.Models.JobTypes;
+﻿using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Models.Workers
 {
-    public class WorkerDetails
+    public class RegisterWorker
     {
-        public Guid WorkerId { get; set; }
         public string WorkerName { get; set; } = string.Empty;
-        public WorkerStatusEnum Status { get; set; }
         public IEnumerable<GetJobType> JobTypeCapabilities { get; set; } = Enumerable.Empty<GetJobType>();
     }
 }
