@@ -29,7 +29,7 @@ namespace TaskMaster.API.Repositories
                     Status = {(int)JobStatusEnum.Queued},
                     AssignedWorkerId = NULL,
                     ModifyDateTime = {DateTime.Now}
-                WHERE j.AssignedWorkerId = {workerId};
+                WHERE AssignedWorkerId = {workerId};
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);

@@ -19,7 +19,7 @@ namespace TaskMaster.API.Controllers
     
 
         [HttpPost("pull")]
-        public async Task<ActionResult<JobDetails?>> Pull(Guid workerId)
+        public async Task<ActionResult<JobDetails?>> Pull([FromQuery] Guid workerId)
         {
             var job = await _jobService.GetNextWorkerJobsAsync(workerId);
             return Ok(job);
@@ -35,7 +35,7 @@ namespace TaskMaster.API.Controllers
         [HttpPost("{jobId}/fail")]
         public async Task<ActionResult<JobDetails>> Fail(Guid jobId, WorkerIdRef workerRef)
         {
-            var job = await _jobService.ChangeJobStatusAsync(jobId, JobStatusEnum.Failied, workerRef);
+            var job = await _jobService.ChangeJobStatusAsync(jobId, JobStatusEnum.Failed, workerRef);
             return Ok(job);
         }
 
