@@ -2,7 +2,7 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Models.JobTypes;
 
-namespace TaskMaster.Tests;
+namespace TaskMaster.Test.UnitTests.Data;
 
 internal static class ServiceTestData
 {

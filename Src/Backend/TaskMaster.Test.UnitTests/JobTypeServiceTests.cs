@@ -5,7 +5,7 @@ using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Services;
 
-namespace TaskMaster.Tests;
+namespace TaskMaster.Test.UnitTests;
 
 public class JobTypeServiceTests
 {

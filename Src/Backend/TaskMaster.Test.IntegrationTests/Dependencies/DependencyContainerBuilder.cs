@@ -13,8 +13,9 @@ using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
+using TaskMaster.Test.IntegrationTests.Factories;
 
-namespace TaskMaster.IntegrationTests
+namespace TaskMaster.Test.IntegrationTests.Dependencies
 {
     public static class DependencyContainerBuilder
     {

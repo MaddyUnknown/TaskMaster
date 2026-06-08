@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TaskMaster.API.Data;
 
-namespace TaskMaster.IntegrationTests
+namespace TaskMaster.Test.IntegrationTests.Factories
 {
     public class SqlServerFactory
     {

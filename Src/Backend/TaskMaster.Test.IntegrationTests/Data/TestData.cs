@@ -1,7 +1,7 @@
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 
-namespace TaskMaster.IntegrationTests;
+namespace TaskMaster.Test.IntegrationTests.Data;
 
 internal static class TestData
 {

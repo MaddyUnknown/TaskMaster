@@ -5,8 +5,10 @@ using TaskMaster.API.Data;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Jobs;
+using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Data;
 
-namespace TaskMaster.IntegrationTests;
+namespace TaskMaster.Test.IntegrationTests;
 
 public class ConcurrencyTests : IntegrationTestBase
 {

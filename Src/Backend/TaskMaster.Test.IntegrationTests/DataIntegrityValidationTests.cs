@@ -1,8 +1,10 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Enums;
+using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Data;
 
-namespace TaskMaster.IntegrationTests;
+namespace TaskMaster.Test.IntegrationTests;
 
 public class DataIntegrityValidationTests : IntegrationTestBase
 {

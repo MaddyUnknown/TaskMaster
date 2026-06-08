@@ -7,8 +7,9 @@ using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Services;
+using TaskMaster.Test.UnitTests.Data;
 
-namespace TaskMaster.Tests;
+namespace TaskMaster.Test.UnitTests;
 
 public class WorkerServiceTests
 {

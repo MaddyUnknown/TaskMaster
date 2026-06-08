@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using TaskMaster.API.Data;
+using TaskMaster.Test.IntegrationTests.Dependencies;
+using TaskMaster.Test.IntegrationTests.Factories;
 
-namespace TaskMaster.IntegrationTests;
+namespace TaskMaster.Test.IntegrationTests.Abstracts;
 
 public abstract class IntegrationTestBase
 {

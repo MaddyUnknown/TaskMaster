@@ -5,8 +5,10 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Data;
 
-namespace TaskMaster.IntegrationTests;
+namespace TaskMaster.Test.IntegrationTests;
 
 public class RepositoryBehaviorTests : IntegrationTestBase
 {
