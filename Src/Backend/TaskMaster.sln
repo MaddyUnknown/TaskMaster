@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Test.UnitTests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Test.IntegrationTests", "TaskMaster.Test.IntegrationTests\TaskMaster.Test.IntegrationTests.csproj", "{4E0B4F48-0F63-8434-7111-BA70FE982F54}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Library.Common", "TaskMaster.Library.Common\TaskMaster.Library.Common.csproj", "{6BDFE9DA-B747-8573-FAA2-E41CBA055E5C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Library.Producer", "TaskMaster.Library.Producer\TaskMaster.Library.Producer.csproj", "{692B6C9A-C98C-4805-4508-2D25FC97D07C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{4E0B4F48-0F63-8434-7111-BA70FE982F54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4E0B4F48-0F63-8434-7111-BA70FE982F54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4E0B4F48-0F63-8434-7111-BA70FE982F54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BDFE9DA-B747-8573-FAA2-E41CBA055E5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BDFE9DA-B747-8573-FAA2-E41CBA055E5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BDFE9DA-B747-8573-FAA2-E41CBA055E5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BDFE9DA-B747-8573-FAA2-E41CBA055E5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

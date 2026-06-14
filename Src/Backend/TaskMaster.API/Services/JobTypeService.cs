@@ -11,11 +11,13 @@ namespace TaskMaster.API.Services
     {
         private IUnitOfWork _unitOfWork;
         private IRepository<JobType> _jobTypeCRUDRepo;
+        private IJobTypeRepository _jobTypeRepository;
 
-        public JobTypeService(IUnitOfWork unitOfWork, IRepository<JobType> jobTypeCRUDRepo)
+        public JobTypeService(IUnitOfWork unitOfWork, IRepository<JobType> jobTypeCRUDRepo, IJobTypeRepository jobTypeRepository)
         {
             _unitOfWork = unitOfWork;
             _jobTypeCRUDRepo = jobTypeCRUDRepo;
+            _jobTypeRepository = jobTypeRepository;
         }
 
         public async Task<JobTypeDetails> CreateJobTypeAsync(CreateJobType jobType)
@@ -26,6 +28,12 @@ namespace TaskMaster.API.Services
             await _unitOfWork.SaveAsync();
 
             return jobTypeEntity.ToJobTypeDetails();
+        }
+
+        public async Task<JobTypeDetails?> GetJobTypeAsync(GetJobType jobType)
+        {
+            var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(jobType.Name, jobType.Version);
+            return jobTypeEntity?.ToJobTypeDetails();
         }
     }
 }

@@ -22,5 +22,14 @@ namespace TaskMaster.API.Controllers
             var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
             return Ok(jobType);
         }
+
+        [HttpGet("")]
+        public async Task<ActionResult<JobTypeDetails>> Get([FromQuery] string name, [FromQuery] long version)
+        {
+            var jobType = await _jobTypeService.GetJobTypeAsync(new GetJobType { Name = name, Version = version });
+            if (jobType == null) return NotFound();
+
+            return Ok(jobType);
+        }
     }
 }

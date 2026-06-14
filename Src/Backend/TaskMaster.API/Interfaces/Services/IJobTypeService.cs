@@ -5,5 +5,6 @@ namespace TaskMaster.API.Interfaces.Services
     public interface IJobTypeService
     {
         Task<JobTypeDetails> CreateJobTypeAsync(CreateJobType jobType);
+        Task<JobTypeDetails?> GetJobTypeAsync(GetJobType jobType);
     }
 }

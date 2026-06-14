@@ -217,12 +217,8 @@ public class JobServiceTests
         _workerRepository
             .Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
             .ReturnsAsync(worker);
-        var i = 0;
         _jobRepository
             .Setup(r => r.GetNextJobForWorkerAsync(worker.Id))
-            .Callback(() => {
-                Console.WriteLine($"Called {++i}");
-                })
             .ReturnsAsync((Job?)null);
 
         // Act

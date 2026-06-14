@@ -8,6 +8,17 @@ internal static class ServiceTestData
 {
     public static GetJobType EmailJobTypeRef => new() { Name = "email", Version = 1 };
     public static GetJobType VideoJobTypeRef => new() { Name = "video", Version = 2 };
+    public static string Emailv1Schema = """
+        {
+            "type": "object",
+            "required": ["Email", "Priority"],
+            "properties": {
+            "Email": { "type": "string", "pattern": "@" },
+            "Priority": { "type": "integer", "minimum": 1 }
+            },
+            "additionalProperties": false
+        }
+    """;
 
     public static JobType EmailJobType(long id = 11) => new()
     {
