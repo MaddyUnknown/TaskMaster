@@ -9,7 +9,7 @@ using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Services;
 using TaskMaster.Test.UnitTests.Data;
 
-namespace TaskMaster.Test.UnitTests;
+namespace TaskMaster.Test.UnitTests.APITests;
 
 public class WorkerServiceTests
 {

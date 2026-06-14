@@ -10,7 +10,7 @@ using TaskMaster.Library.Producer.Interfaces;
 using TaskMaster.Library.Producer.Producers;
 using TaskMaster.Test.UnitTests.Data;
 
-namespace TaskMaster.Test.UnitTests;
+namespace TaskMaster.Test.UnitTests.ProducerTests;
 
 public class TaskProducerTests
 {
