@@ -16,7 +16,7 @@ namespace TaskMaster.Library.Common.Registries
         private IApiHttpClient _httpClient;
         private ICache _cache;
 
-        internal JobTypeSchemaRegistry(IApiHttpClient apiHttpClient, ICache cache)
+        public JobTypeSchemaRegistry(IApiHttpClient apiHttpClient, ICache cache)
         {
             _httpClient = apiHttpClient;
             _cache = cache;

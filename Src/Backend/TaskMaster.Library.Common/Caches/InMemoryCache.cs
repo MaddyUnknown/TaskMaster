@@ -13,7 +13,7 @@ namespace TaskMaster.Library.Common.Caches
     {
         private ConcurrentDictionary<string, object> _cache;
 
-        internal InMemoryCache()
+        public InMemoryCache()
         {
             _cache = new ConcurrentDictionary<string, object>();
         }

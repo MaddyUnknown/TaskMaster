@@ -2,101 +2,276 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
-using TaskMaster.Library.Common.Interfaces.Registries;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Workers;
 using TaskMaster.Library.Consumer;
+using TaskMaster.Library.Consumer.Attributes;
 using TaskMaster.Library.Consumer.Configs;
-using TaskMaster.Library.Consumer.Consumers;
 using TaskMaster.Library.Consumer.DependencyInjection;
-using TaskMaster.Library.Consumer.Models;
+using TaskMaster.Library.Consumer.Factories;
+using TaskMaster.Library.Consumer.Interfaces;
 
 namespace TaskMaster.Test.UnitTests.ConsumerTests;
 
 public class TaskWorkerTests
 {
-    private class TestPayload
-    {
-        public string Name { get; set; } = string.Empty;
-        public int Value { get; set; }
-    }
-
     [Test]
-    public void AddTaskMasterConsumer_WhenCalled_ShouldRegisterCommonServices()
+    public void AddTaskMasterConsumer_WhenCalled_ShouldRegisterWorkerFactory()
     {
+        // Arrange
         var services = new ServiceCollection();
 
         services.AddTaskMasterConsumer(options => options.ApiBaseUrl = "https://taskmaster.test/");
         using var serviceProvider = services.BuildServiceProvider();
 
-        var httpClient = serviceProvider.GetService<IApiHttpClient>();
-        Assert.That(httpClient, Is.Not.Null);
+        // Act
+        var factory = serviceProvider.GetService<IWorkerFactory>();
+
+        // Assert
+        Assert.That(factory, Is.Not.Null);
     }
 
     [Test]
-    public void TaskWorker_WhenStandaloneServicesNotInitialised_ShouldThrow()
+    public void WorkerFactory_WhenStandaloneServicesNotInitialised_ShouldThrow()
     {
-        Assert.Throws<Exception>(() => _ = new TaskWorker<TestPayload>("test-worker"));
+        // Assert
+        Assert.Throws<Exception>(() => _ = new TaskWorkerFactory());
     }
 
     [Test]
-    public void Initialise_WhenStandaloneMode_ShouldAllowParameterlessTaskWorker()
+    public void Initialise_WhenStandaloneMode_ShouldAllowWorkerFactory()
     {
+        // Arrange
         using var consumer = TaskMasterConsumer.Initialise(options => options.ApiBaseUrl = "https://taskmaster.test/");
-        var worker = new TaskWorker<TestPayload>("test-worker");
 
-        Assert.That(worker, Is.Not.Null);
+        // Act
+        var factory = new TaskWorkerFactory();
+
+        // Assert
+        Assert.That(factory, Is.Not.Null);
     }
 
     [Test]
-    public async Task ConsumeAsync_WhenJobAvailable_ShouldReturnPopulatedResult()
+    public async Task CreateWorker_WithHandlerConfig_ShouldDeriveCapabilitiesFromAttribute()
     {
-        var jobId = Guid.NewGuid();
-        var jobType = new JobTypeRef { Name = "test", Version = 1 };
+        // Arrange
         var workerId = Guid.NewGuid();
 
         var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10
+        });
+
+        RegisterWorker? capturedRegistration = null;
+        httpClient
+            .Setup(c => c.RegisterWorker(It.IsAny<RegisterWorker>()))
+            .Returns((RegisterWorker rw) =>
+            {
+                capturedRegistration = rw;
+                return Task.FromResult(new RegisterWorkerResponse
+                {
+                    WorkerDetails = new WorkerDetails { WorkerId = workerId, WorkerName = "test-worker", Status = "Active" },
+                    HeartBeatIntervalSeconds = 3600
+                });
+            });
+
+        httpClient
+            .Setup(c => c.RemoveWorker(workerId))
+            .ReturnsAsync(new WorkerDetails());
+
+        httpClient
+            .Setup(c => c.PullJob(It.IsAny<Guid>()))
+            .ReturnsAsync((JobDetails?)null);
+
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
+        await worker.DisposeAsync();
+
+        // Assert
+        Assert.That(capturedRegistration, Is.Not.Null);
+        Assert.That(capturedRegistration!.JobTypeCapabilities, Has.Exactly(1).Items);
+        var capability = capturedRegistration.JobTypeCapabilities.Single();
+        Assert.Multiple(() =>
+        {
+            Assert.That(capability.Name, Is.EqualTo("email"));
+            Assert.That(capability.Version, Is.EqualTo(1));
+        });
+    }
+
+    [Test]
+    public void CreateWorker_WhenPayloadMissingAttribute_ShouldThrow()
+    {
+        // Assert
+        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
         var options = Options.Create(new TaskMasterConsumerOptions());
+
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+
+        // Assert
+        Assert.Throws<InvalidOperationException>(() =>
+        {
+            factory.CreateWorker("test-worker", cfg =>
+            {
+                cfg.Handle<UnattributedPayload, UnattributedHandler>();
+            });
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_WhenHandlerSucceeds_ShouldCompleteJob()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
+
+        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10
+        });
+
+        SetupWorkerRegistration(httpClient, workerId);
+
+        var pullCount = 0;
+        httpClient
+            .Setup(c => c.PullJob(workerId))
+            .ReturnsAsync(() =>
+            {
+                pullCount++;
+                if (pullCount == 1)
+                    return new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
+                return null;
+            });
+
+        httpClient
+            .Setup(c => c.CompleteJob(jobId, workerId))
+            .ReturnsAsync(new JobDetails());
+
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
+        await worker.DisposeAsync();
+
+        // Assert
+        httpClient.Verify(c => c.CompleteJob(jobId, workerId), Times.Once);
+        httpClient.Verify(c => c.FailJob(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Test]
+    public async Task RunAsync_WhenHandlerSucceeds_ShouldPassDeserializedPayload()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
+
+        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10
+        });
 
         SetupWorkerRegistration(httpClient, workerId);
         SetupPullJob(httpClient, new JobDetails
         {
             JobId = jobId,
             JobType = jobType,
-            Payload = """{"Name":"hello","Value":42}""",
+            Payload = """{"Email":"hello","Priority":42}""",
             Status = "Queued"
         });
+        httpClient
+            .Setup(c => c.CompleteJob(jobId, workerId))
+            .ReturnsAsync(new JobDetails());
 
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
+        var handler = new EmailCapturingHandler();
+        var serviceProvider = BuildServiceProviderWithHandler(httpClient, options, handler);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailCapturingHandler>());
 
-        var result = await worker.ConsumeAsync();
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
         await worker.DisposeAsync();
 
-        Assert.That(result, Is.Not.Null);
+        // Assert
+        Assert.That(handler.ReceivedPayload, Is.Not.Null);
         Assert.Multiple(() =>
         {
-            Assert.That(result!.JobId, Is.EqualTo(jobId));
-            Assert.That(result.JobType.Name, Is.EqualTo("test"));
-            Assert.That(result.JobType.Version, Is.EqualTo(1));
-            Assert.That(result.Status, Is.EqualTo("Queued"));
-            Assert.That(result.Data.Name, Is.EqualTo("hello"));
-            Assert.That(result.Data.Value, Is.EqualTo(42));
+            Assert.That(handler.ReceivedPayload!.Email, Is.EqualTo("hello"));
+            Assert.That(handler.ReceivedPayload.Priority, Is.EqualTo(42));
         });
     }
 
     [Test]
-    public async Task ConsumeAsync_WhenNoJobThenJobAvailable_ShouldPollUntilJobFound()
+    public async Task RunAsync_WhenHandlerThrows_ShouldFailJob()
     {
-        var workerId = Guid.NewGuid();
+        // Arrange
         var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
 
         var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
         var options = Options.Create(new TaskMasterConsumerOptions
         {
-            PollingWaitIntervalMs = 1
+            PollingWaitIntervalMs = 10
+        });
+
+        SetupWorkerRegistration(httpClient, workerId);
+
+        var pullCount = 0;
+        httpClient
+            .Setup(c => c.PullJob(workerId))
+            .ReturnsAsync(() =>
+            {
+                pullCount++;
+                if (pullCount == 1)
+                    return new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
+                return null;
+            });
+
+        httpClient
+            .Setup(c => c.FailJob(jobId, workerId))
+            .ReturnsAsync(new JobDetails());
+
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailFailingHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
+        await worker.DisposeAsync();
+
+        // Assert
+        httpClient.Verify(c => c.FailJob(jobId, workerId), Times.Once);
+        httpClient.Verify(c => c.CompleteJob(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Test]
+    public async Task RunAsync_WhenNoJobThenJobAvailable_ShouldPollUntilJobFound()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
+
+        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10
         });
 
         SetupWorkerRegistration(httpClient, workerId);
@@ -107,32 +282,40 @@ public class TaskWorkerTests
             .ReturnsAsync(() =>
             {
                 callCount++;
+                TestContext.WriteLine(callCount);
                 return callCount == 1
                     ? null
-                    : new JobDetails { JobId = jobId, JobType = new JobTypeRef(), Payload = "{}", Status = "Queued" };
+                    : new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
             });
 
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
+        httpClient
+            .Setup(c => c.CompleteJob(jobId, workerId))
+            .ReturnsAsync(new JobDetails());
 
-        var result = await worker.ConsumeAsync();
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
         await worker.DisposeAsync();
 
-        Assert.That(result, Is.Not.Null);
-        Assert.That(result!.JobId, Is.EqualTo(jobId));
-        Assert.That(callCount, Is.EqualTo(2));
+        // Assert
+        Assert.That(callCount, Is.GreaterThanOrEqualTo(2));
+        httpClient.Verify(c => c.CompleteJob(jobId, workerId), Times.AtLeastOnce);
     }
 
     [Test]
-    public async Task ConsumeAsync_WhenNoJobAndTimeoutElapses_ShouldReturnNull()
+    public async Task RunAsync_WhenPullReturnsNull_ShouldContinueLoop()
     {
+        // Arrange
         var workerId = Guid.NewGuid();
 
         var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
         var options = Options.Create(new TaskMasterConsumerOptions
         {
-            PollingWaitIntervalMs = 10,
-            ConsumerWaitTimeoutMs = 100
+            PollingWaitIntervalMs = 10
         });
 
         SetupWorkerRegistration(httpClient, workerId);
@@ -141,102 +324,103 @@ public class TaskWorkerTests
             .Setup(c => c.PullJob(workerId))
             .ReturnsAsync((JobDetails?)null);
 
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
-        var result = await worker.ConsumeAsync();
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
         await worker.DisposeAsync();
 
-        Assert.That(result, Is.Null);
+        // Assert
+        httpClient.Verify(c => c.PullJob(workerId), Times.AtLeast(2));
     }
 
     [Test]
-    public async Task CompleteAsync_ShouldCallHttpClientCompleteJob()
+    public async Task RunAsync_WhenJobTypeNotInHandlerMap_ShouldThrow()
     {
+        // Arrange
+        var jobType = new JobTypeRef { Name = "unknown-type", Version = 99 };
         var workerId = Guid.NewGuid();
-        var jobId = Guid.NewGuid();
-        var jobResult = new JobConsumeResult<TestPayload>
-        {
-            JobId = jobId,
-            Data = new TestPayload(),
-            JobType = new JobTypeRef(),
-            Status = "Queued"
-        };
 
         var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
-        var options = Options.Create(new TaskMasterConsumerOptions());
-
-        SetupWorkerRegistration(httpClient, workerId);
-        SetupPullJob(httpClient, new JobDetails { JobId = jobId, JobType = new JobTypeRef(), Payload = "{}", Status = "Queued" });
-
-        httpClient
-            .Setup(c => c.CompleteJob(It.IsAny<Guid>(), workerId))
-            .ReturnsAsync(new JobDetails());
-
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
-
-        await worker.ConsumeAsync();
-        await worker.CompleteAsync(jobResult);
-        await worker.DisposeAsync();
-
-        httpClient.Verify(c => c.CompleteJob(It.IsAny<Guid>(), workerId), Times.Once);
-    }
-
-    [Test]
-    public async Task FailAsync_ShouldCallHttpClientFailJob()
-    {
-        var workerId = Guid.NewGuid();
-        var jobId = Guid.NewGuid();
-        var jobResult = new JobConsumeResult<TestPayload>
+        var options = Options.Create(new TaskMasterConsumerOptions
         {
-            JobId = jobId,
-            Data = new TestPayload(),
-            JobType = new JobTypeRef(),
-            Status = "Queued"
-        };
-
-        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
-        var options = Options.Create(new TaskMasterConsumerOptions());
+            PollingWaitIntervalMs = 10
+        });
 
         SetupWorkerRegistration(httpClient, workerId);
-        SetupPullJob(httpClient, new JobDetails { JobId = jobId, JobType = new JobTypeRef(), Payload = "{}", Status = "Queued" });
 
         httpClient
-            .Setup(c => c.FailJob(It.IsAny<Guid>(), workerId))
-            .ReturnsAsync(new JobDetails());
+            .Setup(c => c.PullJob(workerId))
+            .ReturnsAsync(new JobDetails { JobId = Guid.NewGuid(), JobType = jobType, Payload = "{}", Status = "Queued" });
 
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
+        // Act
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
-        await worker.ConsumeAsync();
-        await worker.FailAsync(jobResult);
+        // Assert
+        using var cts = new CancellationTokenSource();
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            await worker.RunAsync(cts.Token);
+        });
         await worker.DisposeAsync();
 
-        httpClient.Verify(c => c.FailJob(It.IsAny<Guid>(), workerId), Times.Once);
+        Assert.That(ex!.Message, Does.Contain("unknown-type"));
     }
 
     [Test]
     public async Task DisposeAsync_ShouldRemoveWorker()
     {
+        // Arrange
         var workerId = Guid.NewGuid();
 
         var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
-        var options = Options.Create(new TaskMasterConsumerOptions());
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10
+        });
 
         SetupWorkerRegistration(httpClient, workerId);
-        SetupPullJob(httpClient, new JobDetails { JobId = Guid.NewGuid(), JobType = new JobTypeRef(), Payload = "{}", Status = "Queued" });
 
         httpClient
-            .Setup(c => c.RemoveWorker(workerId))
-            .ReturnsAsync(new WorkerDetails());
+            .Setup(c => c.PullJob(workerId))
+            .ReturnsAsync((JobDetails?)null);
 
-        var worker = new TaskWorker<TestPayload>("test-worker", schemaRegistry.Object, httpClient.Object, options);
+        var serviceProvider = BuildServiceProvider(httpClient, options);
+        var factory = new TaskWorkerFactory(serviceProvider);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
-        await worker.ConsumeAsync();
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
         await worker.DisposeAsync();
 
+        // Assert
         httpClient.Verify(c => c.RemoveWorker(workerId), Times.Once);
+    }
+
+    private static ServiceProvider BuildServiceProvider(Mock<IApiHttpClient> httpClient, IOptions<TaskMasterConsumerOptions> options)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(httpClient.Object);
+        services.AddSingleton(options);
+        return services.BuildServiceProvider();
+    }
+
+    private static ServiceProvider BuildServiceProviderWithHandler(
+        Mock<IApiHttpClient> httpClient,
+        IOptions<TaskMasterConsumerOptions> options,
+        object handler)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(httpClient.Object);
+        services.AddSingleton(handler.GetType(), handler);
+        services.AddSingleton(options);
+        return services.BuildServiceProvider();
     }
 
     private static void SetupWorkerRegistration(Mock<IApiHttpClient> httpClient, Guid workerId)
@@ -264,5 +448,42 @@ public class TaskWorkerTests
         httpClient
             .Setup(c => c.PullJob(It.IsAny<Guid>()))
             .ReturnsAsync(job);
+    }
+
+    [JobType("email", 1)]
+    private sealed record EmailPayload(string Email, int Priority);
+
+    private class EmailHandler : IJobHandler<EmailPayload>
+    {
+        public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
+    }
+
+    private class EmailCapturingHandler : IJobHandler<EmailPayload>
+    {
+        public EmailPayload? ReceivedPayload { get; private set; }
+
+        public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+        {
+            ReceivedPayload = payload;
+            return Task.CompletedTask;
+        }
+    }
+
+    private class EmailFailingHandler : IJobHandler<EmailPayload>
+    {
+        public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+            => throw new InvalidOperationException("handler failed");
+    }
+
+    public class UnattributedPayload
+    {
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class UnattributedHandler : IJobHandler<UnattributedPayload>
+    {
+        public Task HandleAsync(UnattributedPayload payload, CancellationToken cancellationToken)
+            => Task.CompletedTask;
     }
 }

@@ -25,7 +25,7 @@ namespace TaskMaster.Library.Producer
         private TaskMasterProducer(Action<TaskMasterProducerOptions> configure)
         {
             var services = new ServiceCollection();
-            services.AddTaskMasterProducerCore(configure);
+            services.AddTaskMasterProducer(configure);
 
             _serviceProvider = services.BuildServiceProvider();
         }

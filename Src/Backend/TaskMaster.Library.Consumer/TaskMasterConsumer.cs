@@ -5,13 +5,11 @@ using TaskMaster.Library.Consumer.DependencyInjection;
 
 namespace TaskMaster.Library.Consumer
 {
-    public sealed class TaskMasterConsumer: IDisposable
+    public sealed class TaskMasterConsumer : IDisposable
     {
-        // Static
         private static TaskMasterConsumer? _instance;
         internal static ServiceProvider ServiceProducer => _instance?._serviceProvider ?? throw new Exception(ErrorMessage.ConsumerServiceNotInitialised());
 
-        // Instance
         private ServiceProvider? _serviceProvider;
 
         public static TaskMasterConsumer Initialise(Action<TaskMasterConsumerOptions> configure)
@@ -25,7 +23,7 @@ namespace TaskMaster.Library.Consumer
         private TaskMasterConsumer(Action<TaskMasterConsumerOptions> configure)
         {
             var services = new ServiceCollection();
-            services.AddTaskMasterConsumerCore(configure);
+            services.AddTaskMasterConsumer(configure);
 
             _serviceProvider = services.BuildServiceProvider();
         }

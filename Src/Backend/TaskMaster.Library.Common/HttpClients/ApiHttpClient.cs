@@ -20,12 +20,12 @@ namespace TaskMaster.Library.Common.HttpClients
         private IOptions<ApiConfig> _apiConfigOption;
         private HttpClient _httpClient;
 
-        internal ApiHttpClient(IOptions<ApiConfig> apiConfigOption)
+        public ApiHttpClient(IOptions<ApiConfig> apiConfigOption)
             : this(apiConfigOption, new HttpClient())
         {
         }
 
-        internal ApiHttpClient(IOptions<ApiConfig> apiConfigOption, HttpClient httpClient)
+        public ApiHttpClient(IOptions<ApiConfig> apiConfigOption, HttpClient httpClient)
         {
             _apiConfigOption = apiConfigOption;
             _httpClient = httpClient;

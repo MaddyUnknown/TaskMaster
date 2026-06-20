@@ -1,11 +1,7 @@
-﻿using TaskMaster.Library.Consumer.Models;
-
-namespace TaskMaster.Library.Consumer.Interfaces
+﻿namespace TaskMaster.Library.Consumer.Interfaces
 {
-    public interface IWorker<T>
+    public interface IWorker : IAsyncDisposable
     {
-        Task<JobConsumeResult<T>?> ConsumeAsync();
-        Task CompleteAsync(JobConsumeResult<T> jobResult);
-        Task FailAsync(JobConsumeResult<T> jobResult);
+        Task RunAsync(CancellationToken cancellationToken);
     }
 }

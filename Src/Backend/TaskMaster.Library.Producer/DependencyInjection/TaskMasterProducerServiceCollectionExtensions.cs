@@ -11,13 +11,6 @@ namespace TaskMaster.Library.Producer.DependencyInjection
     {
         public static IServiceCollection AddTaskMasterProducer(this IServiceCollection services, Action<TaskMasterProducerOptions> configure)
         {
-            services.AddTaskMasterProducerCore(configure);
-
-            return services;
-        }
-
-        internal static IServiceCollection AddTaskMasterProducerCore(this IServiceCollection services, Action<TaskMasterProducerOptions> configure)
-        {
             var options = new TaskMasterProducerOptions();
             configure(options);
 

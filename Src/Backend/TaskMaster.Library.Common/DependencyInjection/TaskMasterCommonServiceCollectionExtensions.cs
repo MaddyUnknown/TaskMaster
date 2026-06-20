@@ -28,11 +28,9 @@ namespace TaskMaster.Library.Common.DependencyInjection
 
         private static void RegisterCommonService(IServiceCollection services)
         {
-            services.AddSingleton<ICache>(_ => new InMemoryCache());
-            services.AddSingleton<IApiHttpClient>(serviceProvider => new ApiHttpClient(serviceProvider.GetRequiredService<IOptions<ApiConfig>>()));
-            services.AddSingleton<IJobTypeSchemaRegistry>(serviceProvider => new JobTypeSchemaRegistry(
-                serviceProvider.GetRequiredService<IApiHttpClient>(),
-                serviceProvider.GetRequiredService<ICache>()));
+            services.AddSingleton<ICache, InMemoryCache>();
+            services.AddSingleton<IApiHttpClient, ApiHttpClient>();
+            services.AddSingleton<IJobTypeSchemaRegistry, JobTypeSchemaRegistry>();
         }
     }
 }

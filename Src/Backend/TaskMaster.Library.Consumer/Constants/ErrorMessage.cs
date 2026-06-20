@@ -8,10 +8,10 @@ namespace TaskMaster.Library.Consumer.Constants
 {
     internal class ErrorMessage
     {
-        //internal static string JobTypeAttributeNotFound(string classFullName) => $"Payload type '{classFullName}' must be decorated with JobTypeAttribute.";
-        //internal static string JsonSchemaValidationFailed(IEnumerable<string> errors) => $"Payload does not match the job type schema: {string.Join("; ", errors)}";
         internal static string ConsumerServiceAlreadyInitialised() => $"Consumer service already initialised";
         internal static string ConsumerServiceNotInitialised() => $"Consumer services not initilised";
+        internal static string HandlerNotRegistered(string name, long version) => $"No handler registered for job type '{name}' version '{version}'.";
+        internal static string JsonParsingError(Guid jobId, string jobTypeName, long jobTypeVersion) => $"Error while parsing payload for job id: '{jobId}' job type '{jobTypeName}' version '{jobTypeVersion}'";
 
     }
 }
