@@ -282,7 +282,6 @@ public class TaskWorkerTests
             .ReturnsAsync(() =>
             {
                 callCount++;
-                TestContext.WriteLine(callCount);
                 return callCount == 1
                     ? null
                     : new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
