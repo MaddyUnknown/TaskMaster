@@ -1,3 +1,5 @@
+using TaskMaster.Library.Common.Models.JobType;
+
 namespace TaskMaster.Library.Common.Models.Jobs
 {
     public class CreateJobRequest

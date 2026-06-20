@@ -67,7 +67,7 @@ public class JobServiceTests
     public void CreateAsync_WhenUnknownJobType_ShouldThrowException()
     {
         // Arrange
-        var jobType = new GetJobType { Name = "missing", Version = 1 };
+        var jobType = new JobTypeRef { Name = "missing", Version = 1 };
 
         _jobTypeRepository
             .Setup(r => r.GetByJobTypeNameAndVersionAsync(jobType.Name, jobType.Version))

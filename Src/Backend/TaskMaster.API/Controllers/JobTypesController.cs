@@ -26,7 +26,7 @@ namespace TaskMaster.API.Controllers
         [HttpGet("")]
         public async Task<ActionResult<JobTypeDetails>> Get([FromQuery] string name, [FromQuery] long version)
         {
-            var jobType = await _jobTypeService.GetJobTypeAsync(new GetJobType { Name = name, Version = version });
+            var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
             if (jobType == null) return NotFound();
 
             return Ok(jobType);

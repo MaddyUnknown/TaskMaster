@@ -25,10 +25,8 @@ public class TaskProducerTests
         using var serviceProvider = services.BuildServiceProvider();
 
         // Assert
-        var producer = serviceProvider.GetRequiredService<IProducer>();
-        var taskProducer = serviceProvider.GetRequiredService<TaskProducer>();
-
-        Assert.That(producer, Is.SameAs(taskProducer));
+        var producer = serviceProvider.GetService<IProducer>();
+        Assert.That(producer, Is.Not.Null);
     }
 
     [Test]
@@ -69,7 +67,7 @@ public class TaskProducerTests
             {
                 createdJob = c;
             })
-            .ReturnsAsync(new CreateJobResponse());
+            .ReturnsAsync(new JobDetails());
         
         var producer = new TaskProducer(schemaRegistry.Object, httpClient.Object);
 

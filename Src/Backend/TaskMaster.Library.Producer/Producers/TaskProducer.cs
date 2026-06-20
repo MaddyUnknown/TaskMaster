@@ -5,6 +5,7 @@ using Newtonsoft.Json.Schema;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
 using TaskMaster.Library.Common.Interfaces.Registries;
 using TaskMaster.Library.Common.Models.Jobs;
+using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Producer.Attributes;
 using TaskMaster.Library.Producer.Constants;
 using TaskMaster.Library.Producer.Interfaces;

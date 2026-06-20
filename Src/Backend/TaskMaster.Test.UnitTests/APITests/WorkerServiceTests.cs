@@ -70,8 +70,8 @@ public class WorkerServiceTests
         Assert.That(persisted.WorkerCapabilities.Count(c => c.JobType == emailJobType), Is.EqualTo(1));
         Assert.That(persisted.WorkerCapabilities.Count(c => c.JobType == videoJobType), Is.EqualTo(1));
 
-        Assert.That(result.WorkerId, Is.EqualTo(persisted.WorkerPublicId));
-        Assert.That(result.Status, Is.EqualTo(WorkerStatusEnum.Active));
+        Assert.That(result.WorkerDetails.WorkerId, Is.EqualTo(persisted.WorkerPublicId));
+        Assert.That(result.WorkerDetails.Status, Is.EqualTo(WorkerStatusEnum.Active));
         Assert.That(result.HeartBeatIntervalSeconds, Is.EqualTo(15));
 
         _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Once);

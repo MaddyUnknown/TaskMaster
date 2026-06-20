@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Library.Common",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Library.Producer", "TaskMaster.Library.Producer\TaskMaster.Library.Producer.csproj", "{692B6C9A-C98C-4805-4508-2D25FC97D07C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TaskMaster.Library.Consumer", "TaskMaster.Library.Consumer\TaskMaster.Library.Consumer.csproj", "{59E2B34F-D825-4581-BB8F-13B483A57C77}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{692B6C9A-C98C-4805-4508-2D25FC97D07C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59E2B34F-D825-4581-BB8F-13B483A57C77}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59E2B34F-D825-4581-BB8F-13B483A57C77}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59E2B34F-D825-4581-BB8F-13B483A57C77}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59E2B34F-D825-4581-BB8F-13B483A57C77}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

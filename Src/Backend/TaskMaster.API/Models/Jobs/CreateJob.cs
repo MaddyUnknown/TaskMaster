@@ -5,7 +5,7 @@ namespace TaskMaster.API.Models.Jobs
 {
     public class CreateJob
     {
-        public GetJobType JobType { get; set; } = GetJobType.Empty;
+        public JobTypeRef JobType { get; set; } = JobTypeRef.Empty;
         public string Payload { get; set; } = string.Empty;
     }
 }

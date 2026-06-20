@@ -1,8 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using TaskMaster.Library.Common.Configs;
 using TaskMaster.Library.Common.DependencyInjection;
-using TaskMaster.Library.Common.Interfaces.HttpClients;
-using TaskMaster.Library.Common.Interfaces.Registries;
 using TaskMaster.Library.Producer.Configs;
 using TaskMaster.Library.Producer.Interfaces;
 using TaskMaster.Library.Producer.Producers;
@@ -28,10 +26,7 @@ namespace TaskMaster.Library.Producer.DependencyInjection
                 ApiBaseUrl = options.ApiBaseUrl
             });
 
-            services.AddSingleton<TaskProducer>(serviceProvider => new TaskProducer(
-                serviceProvider.GetRequiredService<IJobTypeSchemaRegistry>(),
-                serviceProvider.GetRequiredService<IApiHttpClient>()));
-            services.AddSingleton<IProducer>(serviceProvider => serviceProvider.GetRequiredService<TaskProducer>());
+            services.AddTransient<IProducer, TaskProducer>();
 
             return services;
         }

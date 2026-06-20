@@ -30,7 +30,7 @@ namespace TaskMaster.API.Services
             return jobTypeEntity.ToJobTypeDetails();
         }
 
-        public async Task<JobTypeDetails?> GetJobTypeAsync(GetJobType jobType)
+        public async Task<JobTypeDetails?> GetJobTypeAsync(JobTypeRef jobType)
         {
             var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(jobType.Name, jobType.Version);
             return jobTypeEntity?.ToJobTypeDetails();

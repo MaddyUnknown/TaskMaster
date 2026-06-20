@@ -6,8 +6,8 @@ namespace TaskMaster.Test.UnitTests.Data;
 
 internal static class ServiceTestData
 {
-    public static GetJobType EmailJobTypeRef => new() { Name = "email", Version = 1 };
-    public static GetJobType VideoJobTypeRef => new() { Name = "video", Version = 2 };
+    public static JobTypeRef EmailJobTypeRef => new() { Name = "email", Version = 1 };
+    public static JobTypeRef VideoJobTypeRef => new() { Name = "video", Version = 2 };
     public static string Emailv1Schema = """
         {
             "type": "object",

@@ -21,6 +21,7 @@
     <ProjectReference Include="..\TaskMaster.API\TaskMaster.API.csproj" />
     <ProjectReference Include="..\TaskMaster.Library.Common\TaskMaster.Library.Common.csproj" />
     <ProjectReference Include="..\TaskMaster.Library.Producer\TaskMaster.Library.Producer.csproj" />
+    <ProjectReference Include="..\TaskMaster.Library.Consumer\TaskMaster.Library.Consumer.csproj" />
   </ItemGroup>
 
 </Project>

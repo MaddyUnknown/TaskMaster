@@ -50,7 +50,7 @@ public class JobTypeServiceTests
         var service = new JobTypeService(unitOfWork.Object, repository.Object, jobTypeRepository.Object);
 
         // Act
-        var result = await service.GetJobTypeAsync(new GetJobType { Name = jobType.Name, Version = jobType.Version });
+        var result = await service.GetJobTypeAsync(new JobTypeRef { Name = jobType.Name, Version = jobType.Version });
 
         // Assert
         Assert.That(result, Is.Not.Null);

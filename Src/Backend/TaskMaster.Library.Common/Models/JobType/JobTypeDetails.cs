@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TaskMaster.Library.Common.Models.JobType
 {
-    public class GetJobTypeResponse
+    public class JobTypeDetails
     {
         public string Name { get; set; } = string.Empty;
         public long Version { get; set; }

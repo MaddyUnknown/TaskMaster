@@ -26,7 +26,7 @@ namespace TaskMaster.API.Mappers
                 WorkerId = worker.WorkerPublicId,
                 WorkerName = worker.WorkerName,
                 Status = worker.Status,
-                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new GetJobType { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
+                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new JobTypeRef { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
             };
         }
         
@@ -34,8 +34,7 @@ namespace TaskMaster.API.Mappers
         {
             return new RegisterWorkerResponse
             {
-                WorkerId = worker.WorkerPublicId,
-                Status = worker.Status,
+                WorkerDetails = worker.ToWorkerDetails(),
                 HeartBeatIntervalSeconds = heartBeatIntervalSeconds
             };
         }

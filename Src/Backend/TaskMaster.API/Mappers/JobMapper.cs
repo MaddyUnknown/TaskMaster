@@ -23,7 +23,7 @@ namespace TaskMaster.API.Mappers
             return new JobDetails
             {
                 JobId = jobEntity.JobPublicId,
-                JobType = (jobEntity.JobType == null) ? GetJobType.Empty : new GetJobType { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
+                JobType = (jobEntity.JobType == null) ? JobTypeRef.Empty : new JobTypeRef { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
                 Payload = jobEntity.Payload,
                 Status = jobEntity.Status
             };
