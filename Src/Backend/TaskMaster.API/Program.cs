@@ -1,11 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text.Json.Serialization;
-using TaskMaster.API.Data;
 using TaskMaster.API.Configs;
+using TaskMaster.API.Data;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Middleware;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
 
@@ -71,8 +72,9 @@ namespace TaskMaster.API
             // Configure the HTTP request pipeline.
             app.UseHttpsRedirection();
 
-            app.UseAuthorization();
+            app.UseMiddleware<RequestContextMiddleware>();
 
+            app.UseAuthorization();
 
             app.MapControllers();
 

@@ -9,27 +9,51 @@ namespace TaskMaster.API.Controllers
     public class JobTypesController : ControllerBase
     {
         private IJobTypeService _jobTypeService;
+        private ILogger<JobTypesController> _logger;
 
-        public JobTypesController(IJobTypeService jobTypeService)
+        public JobTypesController(IJobTypeService jobTypeService, ILogger<JobTypesController> logger)
         {
             _jobTypeService = jobTypeService;
+            _logger = logger;
         }
-
 
         [HttpPost("")]
         public async Task<ActionResult<JobTypeDetails?>> Create(CreateJobType createJob)
         {
-            var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
-            return Ok(jobType);
+            try
+            {
+                var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
+                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} created", jobType.Name, jobType.Version);
+                return Ok(jobType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Job type creation failed for {JobTypeName} v{JobTypeVersion}",
+                    createJob.Name, createJob.Version);
+                return StatusCode(500);
+            }
         }
 
         [HttpGet("")]
         public async Task<ActionResult<JobTypeDetails>> Get([FromQuery] string name, [FromQuery] long version)
         {
-            var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
-            if (jobType == null) return NotFound();
+            try
+            {
+                var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
+                if (jobType == null)
+                {
+                    _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
+                    return NotFound();
+                }
 
-            return Ok(jobType);
+                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
+                return Ok(jobType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Job type retrieval failed for {JobTypeName} v{JobTypeVersion}", name, version);
+                return StatusCode(500);
+            }
         }
     }
 }
