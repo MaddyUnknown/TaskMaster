@@ -4,7 +4,6 @@ using TaskMaster.Library.Common.Interfaces.HttpClients;
 using TaskMaster.Library.Common.Interfaces.Registries;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Producer;
-using TaskMaster.Library.Producer.Attributes;
 using TaskMaster.Library.Producer.DependencyInjection;
 using TaskMaster.Library.Producer.Interfaces;
 using TaskMaster.Library.Producer.Producers;
@@ -14,6 +13,19 @@ namespace TaskMaster.Test.UnitTests.ProducerTests;
 
 public class TaskProducerTests
 {
+    private Mock<IJobTypeSchemaRegistry> _schemaRegistry = null!;
+    private Mock<IApiHttpClient> _httpClient = null!;
+
+    private TaskProducer CreateProducer() =>
+        new(_schemaRegistry.Object, _httpClient.Object);
+
+    [SetUp]
+    public void SetupMock()
+    {
+        _schemaRegistry = new(MockBehavior.Strict);
+        _httpClient = new(MockBehavior.Strict);
+    }
+
     [Test]
     public void AddTaskMasterProducer_WhenCalled_ShouldRegisterProducerDependencies()
     {
@@ -51,28 +63,22 @@ public class TaskProducerTests
     public async Task ProduceAsync_WhenPayloadMatchesSchema_ShouldCreateJob()
     {
         // Arrange
-        var payload = new EmailPayload("person@example.com", 2);
         CreateJobRequest? createdJob = null;
 
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
-        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-
-        schemaRegistry
+        _schemaRegistry
             .Setup(sr => sr.GetByJobTypeNameAndVersion(ServiceTestData.EmailJobTypeRef.Name, ServiceTestData.EmailJobTypeRef.Version))
             .ReturnsAsync(ServiceTestData.Emailv1Schema);
 
-        httpClient
+        _httpClient
             .Setup(hc => hc.CreateJob(It.IsAny<CreateJobRequest>()))
             .Callback<CreateJobRequest>(c =>
             {
                 createdJob = c;
             })
             .ReturnsAsync(new JobDetails());
-        
-        var producer = new TaskProducer(schemaRegistry.Object, httpClient.Object);
 
         // Act
-        await producer.ProduceAsync(new EmailPayload("person@example.com", 2));
+        await CreateProducer().ProduceAsync(new EmailPayload("person@example.com", 2));
 
         // Assert
         Assert.That(createdJob, Is.Not.Null);
@@ -85,29 +91,18 @@ public class TaskProducerTests
     public void ProduceAsync_WhenPayloadDoesNotMatchSchema_ShouldThrowAndNotCreateJob()
     {
         // Arrange
-        var payload = new EmailPayload("person@example.com", 2);
-
-        var schemaRegistry = new Mock<IJobTypeSchemaRegistry>(MockBehavior.Strict);
-        var httpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
-
-        schemaRegistry
+        _schemaRegistry
             .Setup(sr => sr.GetByJobTypeNameAndVersion(ServiceTestData.EmailJobTypeRef.Name, ServiceTestData.EmailJobTypeRef.Version))
             .ReturnsAsync(ServiceTestData.Emailv1Schema);
 
-        httpClient
+        _httpClient
             .Setup(hc => hc.CreateJob(It.IsAny<CreateJobRequest>()));
 
-        var producer = new TaskProducer(schemaRegistry.Object, httpClient.Object);
-
         // Act
-        var act = () => producer.ProduceAsync(new EmailPayload("not-an-email", 0));
+        var act = () => CreateProducer().ProduceAsync(new EmailPayload("not-an-email", 0));
 
         // Assert
         Assert.ThrowsAsync<InvalidOperationException>(async () => await act());
-        httpClient.Verify(sr => sr.CreateJob(It.IsAny<CreateJobRequest>()), Times.Never);
+        _httpClient.Verify(sr => sr.CreateJob(It.IsAny<CreateJobRequest>()), Times.Never);
     }
-
-
-    [JobType("email", 1)]
-    private sealed record EmailPayload(string Email, int Priority);
 }

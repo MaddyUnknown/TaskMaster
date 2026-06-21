@@ -36,7 +36,6 @@ internal static class ServiceTestData
         Schema = "{}"
     };
 
-    //TO-DO: Make capability as a list
     public static Worker ActiveWorker(Guid? publicId = null, long id = 101, ICollection<JobType>? capabilities = null) => new()
     {
         Id = id,

@@ -9,21 +9,31 @@ namespace TaskMaster.Test.UnitTests.APITests;
 
 public class JobTypeServiceTests
 {
+    private Mock<IUnitOfWork> _unitOfWork = null!;
+    private Mock<IRepository<JobType>> _repository = null!;
+    private Mock<IJobTypeRepository> _jobTypeRepository = null!;
+
+    private JobTypeService CreateService() =>
+        new(_unitOfWork.Object, _repository.Object, _jobTypeRepository.Object);
+
+    [SetUp]
+    public void SetupMock()
+    {
+        _unitOfWork = new();
+        _repository = new(MockBehavior.Strict);
+        _jobTypeRepository = new(MockBehavior.Strict);
+    }
+
     [Test]
     public async Task CreateJobType_ShouldPersistJobType()
     {
         // Arrange
-        var unitOfWork = new Mock<IUnitOfWork>();
-        var repository = new Mock<IRepository<JobType>>(MockBehavior.Strict);
-        var jobTypeRepository = new Mock<IJobTypeRepository>(MockBehavior.Strict);
         JobType? persisted = null;
 
-        repository.Setup(r => r.Add(It.IsAny<JobType>())).Callback<JobType>(j => persisted = j);
-
-        var service = new JobTypeService(unitOfWork.Object, repository.Object, jobTypeRepository.Object);
+        _repository.Setup(r => r.Add(It.IsAny<JobType>())).Callback<JobType>(j => persisted = j);
 
         // Act
-        var result = await service.CreateJobTypeAsync(new CreateJobType { Name = "email", Version = 1, Schema = "{}" });
+        var result = await CreateService().CreateJobTypeAsync(new CreateJobType { Name = "email", Version = 1, Schema = "{}" });
 
         // Assert
         Assert.That(persisted, Is.Not.Null);
@@ -31,26 +41,21 @@ public class JobTypeServiceTests
         Assert.That(persisted.Version, Is.EqualTo(1));
         Assert.That(result.Schema, Is.EqualTo("{}"));
 
-        repository.Verify(r => r.Add(It.IsAny<JobType>()), Times.Once);
+        _repository.Verify(r => r.Add(It.IsAny<JobType>()), Times.Once);
     }
 
     [Test]
     public async Task GetJobTypeAsync_WhenJobTypeExists_ShouldReturnDetails()
     {
         // Arrange
-        var unitOfWork = new Mock<IUnitOfWork>();
-        var repository = new Mock<IRepository<JobType>>(MockBehavior.Strict);
-        var jobTypeRepository = new Mock<IJobTypeRepository>(MockBehavior.Strict);
         var jobType = new JobType { Name = "email", Version = 1, Schema = "{}" };
 
-        jobTypeRepository
+        _jobTypeRepository
             .Setup(r => r.GetByJobTypeNameAndVersionAsync(jobType.Name, jobType.Version))
             .ReturnsAsync(jobType);
 
-        var service = new JobTypeService(unitOfWork.Object, repository.Object, jobTypeRepository.Object);
-
         // Act
-        var result = await service.GetJobTypeAsync(new JobTypeRef { Name = jobType.Name, Version = jobType.Version });
+        var result = await CreateService().GetJobTypeAsync(new JobTypeRef { Name = jobType.Name, Version = jobType.Version });
 
         // Assert
         Assert.That(result, Is.Not.Null);
