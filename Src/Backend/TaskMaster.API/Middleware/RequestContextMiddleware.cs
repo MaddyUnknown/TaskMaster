@@ -16,9 +16,7 @@ public class RequestContextMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
-        var correlationId = context.Request.Headers.TryGetValue("X-Correlation-ID", out var headerId)
-            ? headerId.ToString()
-            : Guid.NewGuid().ToString();
+        var correlationId = Guid.NewGuid().ToString();
 
         context.Items["CorrelationId"] = correlationId;
 
