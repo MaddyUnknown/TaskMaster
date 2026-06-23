@@ -57,7 +57,7 @@ namespace TaskMaster.Library.Consumer.Workers
                 try
                 {
                     var payload = JsonConvert.DeserializeObject(jobResult.Payload ?? string.Empty, entry.PayloadType);
-                    if (payload == null) throw new Exception(ErrorMessage.JsonParsingError(jobResult.JobId, jobResult.JobType.Name, jobResult.JobType.Version));
+                    if (payload == null) throw new InvalidOperationException(ErrorMessage.JsonParsingError(jobResult.JobId, jobResult.JobType.Name, jobResult.JobType.Version));
 
                     await handler.HandleAsync(payload, cancellationToken);
 
@@ -156,7 +156,7 @@ namespace TaskMaster.Library.Consumer.Workers
                 while (await timer.WaitForNextTickAsync(_heartBeatCancelToken.Token))
                 {
                     var result = await _httpClient.WorkerHeartBeat(_workerDetails.WorkerId);
-                    if (result.ActionStatus != "Ok") throw new Exception();
+                    if (result.ActionStatus != "Ok") throw new InvalidOperationException("Heartbeat failed for worker.");
                 }
             });
         }

@@ -1,14 +1,11 @@
 ﻿using Microsoft.Extensions.Options;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Net;
 using System.Net.Http.Json;
-using System.Text;
-using System.Threading.Tasks;
+using System.Text.Json;
 using TaskMaster.Library.Common.Configs;
 using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
+using TaskMaster.Library.Common.Models.Common;
 using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.Workers;
@@ -34,114 +31,133 @@ namespace TaskMaster.Library.Common.HttpClients
         public async Task<JobTypeDetails?> GetJobType(GetJobTypeRequest request)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.GetAsync(ApiEndpoint.GetJobType(request.JobTypeName, request.JobTypeVersion));
+            var endpoint = ApiEndpoint.GetJobType(request.JobTypeName, request.JobTypeVersion);
+            var response = await SendAsync(endpoint, () => _httpClient.GetAsync(endpoint));
             if (response.StatusCode == HttpStatusCode.NotFound) return null;
-
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<JobTypeDetails>();
+            var wrapper = await EnsureSuccessAsync<JobTypeDetails?>(response);
+            return wrapper.Data;
         }
 
         public async Task<JobDetails> CreateJob(CreateJobRequest request)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsJsonAsync(ApiEndpoint.CreateJob, request);
-            response.EnsureSuccessStatusCode();
-
-            var job = await response.Content.ReadFromJsonAsync<JobDetails>();
-            if (job == null) throw new InvalidOperationException("Job API returned an empty response.");
-
-            return job;
+            var endpoint = ApiEndpoint.CreateJob;
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, request));
+            var wrapper = await EnsureSuccessAsync<JobDetails>(response);
+            return wrapper.Data!;
         }
 
         public async Task<RegisterWorkerResponse> RegisterWorker(RegisterWorker worker)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsJsonAsync(ApiEndpoint.RegisterWorker, worker);
-            response.EnsureSuccessStatusCode();
-
-            var workerRegistrationResponse = await response.Content.ReadFromJsonAsync<RegisterWorkerResponse>();
-            if (workerRegistrationResponse == null) throw new InvalidOperationException("Worker API returned an empty response.");
-
-            return workerRegistrationResponse;
+            var endpoint = ApiEndpoint.RegisterWorker;
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, worker));
+            var wrapper = await EnsureSuccessAsync<RegisterWorkerResponse>(response);
+            return wrapper.Data!;
         }
 
         public async Task<WorkerDetails> RemoveWorker(Guid workerId)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.DeleteAsync(ApiEndpoint.RemoveWorker(workerId));
-            response.EnsureSuccessStatusCode();
-
-            var worker = await response.Content.ReadFromJsonAsync<WorkerDetails>();
-            if (worker == null) throw new InvalidOperationException("Worker API returned an empty response.");
-
-            return worker;
+            var endpoint = ApiEndpoint.RemoveWorker(workerId);
+            var response = await SendAsync(endpoint, () => _httpClient.DeleteAsync(endpoint));
+            var wrapper = await EnsureSuccessAsync<WorkerDetails>(response);
+            return wrapper.Data!;
         }
 
         public async Task<JobDetails?> PullJob(Guid workerId)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsync(ApiEndpoint.PullJob(workerId), null);
+            var endpoint = ApiEndpoint.PullJob(workerId);
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsync(endpoint, null));
             if (response.StatusCode == HttpStatusCode.NoContent) return null;
-
-            response.EnsureSuccessStatusCode();
-            return await response.Content.ReadFromJsonAsync<JobDetails>();
+            var wrapper = await EnsureSuccessAsync<JobDetails?>(response);
+            return wrapper.Data;
         }
 
         public async Task<JobDetails> CompleteJob(Guid jobId, Guid workerId)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsJsonAsync(ApiEndpoint.CompleteJob(jobId), new { WorkerId = workerId });
-            response.EnsureSuccessStatusCode();
-
-            var job = await response.Content.ReadFromJsonAsync<JobDetails>();
-            if (job == null) throw new InvalidOperationException("Job API returned an empty response.");
-
-            return job;
+            var endpoint = ApiEndpoint.CompleteJob(jobId);
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
+            var wrapper = await EnsureSuccessAsync<JobDetails>(response);
+            return wrapper.Data!;
         }
 
         public async Task<JobDetails> FailJob(Guid jobId, Guid workerId)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsJsonAsync(ApiEndpoint.FailJob(jobId), new { WorkerId = workerId });
-            response.EnsureSuccessStatusCode();
-
-            var job = await response.Content.ReadFromJsonAsync<JobDetails>();
-            if (job == null) throw new InvalidOperationException("Job API returned an empty response.");
-
-            return job;
+            var endpoint = ApiEndpoint.FailJob(jobId);
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
+            var wrapper = await EnsureSuccessAsync<JobDetails>(response);
+            return wrapper.Data!;
         }
 
         public async Task<HeartbeatActionStatus> WorkerHeartBeat(Guid workerId)
         {
             EnsureBaseAddress();
-
-            var response = await _httpClient.PostAsJsonAsync(ApiEndpoint.WorkerHeartBeat(workerId), string.Empty);
-            response.EnsureSuccessStatusCode();
-
-            var heartbeatAction = await response.Content.ReadFromJsonAsync<HeartbeatActionStatus>();
-            if (heartbeatAction == null) throw new InvalidOperationException("Worker API returned an empty response.");
-
-            return heartbeatAction;
+            var endpoint = ApiEndpoint.WorkerHeartBeat(workerId);
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, string.Empty));
+            var wrapper = await EnsureSuccessAsync<HeartbeatActionStatus>(response);
+            return wrapper.Data!;
         }
-
 
         private void EnsureBaseAddress()
         {
             if (_httpClient.BaseAddress != null) return;
 
             if (string.IsNullOrWhiteSpace(_apiConfigOption.Value.ApiBaseUrl))
-            {
                 throw new InvalidOperationException("TaskMaster API base URL is required.");
-            }
 
             _httpClient.BaseAddress = new Uri(_apiConfigOption.Value.ApiBaseUrl);
+        }
+
+        private static async Task<HttpResponseMessage> SendAsync(
+            string endpoint, Func<Task<HttpResponseMessage>> send)
+        {
+            try
+            {
+                return await send();
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode is null)
+            {
+                throw new InvalidOperationException(
+                    $"Network error calling '{endpoint}': {ex.Message}", ex);
+            }
+        }
+
+        private static async Task<ApiResponse<T>> EnsureSuccessAsync<T>(
+            HttpResponseMessage response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorMessage = await TryReadErrorMessageAsync(response);
+                throw new InvalidOperationException(errorMessage);
+            }
+
+            var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
+            if (wrapper == null) throw new InvalidOperationException("API returned an empty response.");
+
+            if (!wrapper.IsSuccess) throw new InvalidOperationException(string.Join("; ", wrapper.ErrorMessages));
+
+            return wrapper;
+        }
+
+        private static async Task<string> TryReadErrorMessageAsync(
+            HttpResponseMessage response)
+        {
+            try
+            {
+                var errorWrapper = await response.Content.ReadFromJsonAsync<ApiResponse<object?>>();
+
+                if (errorWrapper?.ErrorMessages.Count > 0) return string.Join("; ", errorWrapper.ErrorMessages);
+            }
+            catch (JsonException)
+            {
+
+            }
+
+            return $"API returned status code {(int)response.StatusCode}.";
         }
     }
 }

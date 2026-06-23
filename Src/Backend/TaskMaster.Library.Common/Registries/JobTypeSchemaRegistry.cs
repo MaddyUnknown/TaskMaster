@@ -31,7 +31,7 @@ namespace TaskMaster.Library.Common.Registries
                 return response?.Schema;
             });
 
-            if (schema == null) throw new Exception(ErrorMessage.JobTypeNotFound(jobTypeName, jobTypeVersion));
+            if (schema == null) throw new InvalidOperationException(ErrorMessage.JobTypeNotFound(jobTypeName, jobTypeVersion));
             return schema;
         }
     }

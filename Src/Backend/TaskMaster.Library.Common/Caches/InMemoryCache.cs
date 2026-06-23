@@ -27,13 +27,13 @@ namespace TaskMaster.Library.Common.Caches
 
             if (factory == null)
             {
-                throw new Exception(ErrorMessage.CacheKeyNotFound(key));
+                throw new InvalidOperationException(ErrorMessage.CacheKeyNotFound(key));
             }
 
             var createdValue = factory();
             if (createdValue == null)
             {
-                throw new Exception(ErrorMessage.CacheKeyNotFound(key));
+                throw new InvalidOperationException(ErrorMessage.CacheKeyNotFound(key));
             }
 
             return (T)_cache.GetOrAdd(key, createdValue);

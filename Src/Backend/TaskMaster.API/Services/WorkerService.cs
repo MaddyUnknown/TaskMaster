@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
@@ -35,7 +36,7 @@ namespace TaskMaster.API.Services
         public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorker registerWorker)
         {
             var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
-            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new Exception();
+            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new ValidationException("One or more job type capabilities do not exist.");
 
             var worker = registerWorker.ToWorker(jobTypes);
             _workerCRUDRepository.Add(worker);
@@ -51,7 +52,7 @@ namespace TaskMaster.API.Services
             try
             {
                 var worker = await _workerRepository.GetByPublicIdAsync(workerId);
-                if (worker == null) throw new Exception();
+                if (worker == null) throw new NotFoundException(nameof(Worker), workerId);
 
                 worker.Status = WorkerStatusEnum.InActive;
                 _workerCRUDRepository.Update(worker);

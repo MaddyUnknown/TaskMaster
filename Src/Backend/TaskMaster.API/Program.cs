@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text.Json.Serialization;
@@ -33,6 +34,8 @@ namespace TaskMaster.API
                 {
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
+
+
 
             // Db Context
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -73,6 +76,7 @@ namespace TaskMaster.API
             app.UseHttpsRedirection();
 
             app.UseMiddleware<RequestContextMiddleware>();
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
 
             app.UseAuthorization();
 

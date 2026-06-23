@@ -1,5 +1,6 @@
 ﻿using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
@@ -29,7 +30,7 @@ namespace TaskMaster.API.Services
         public async Task<JobDetails> CreateAsync(CreateJob job)
         {
             var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(job.JobType.Name, job.JobType.Version);
-            if (jobTypeEntity == null) throw new Exception();
+            if (jobTypeEntity == null) throw new NotFoundException(nameof(JobType), (job.JobType.Name, job.JobType.Version));
 
             var jobEntity = job.ToJob(jobTypeEntity);
             
@@ -42,7 +43,7 @@ namespace TaskMaster.API.Services
         public async Task<JobDetails> ChangeJobStatusAsync(Guid jobId, JobStatusEnum status, WorkerIdRef workerIdRef)
         {
             var jobEntity = await _jobRepository.GetByJobPublicIdAndWorkerPublicIdAsync(jobId, workerIdRef.WorkerId);
-            if(jobEntity == null) throw new Exception();
+            if (jobEntity == null) throw new NotFoundException(nameof(Job), jobId);
 
             jobEntity.Status = status;
 
@@ -59,7 +60,8 @@ namespace TaskMaster.API.Services
             try
             {
                 var worker = await _workerRepository.GetByPublicIdAsync(workerId);
-                if (worker == null || worker.Status == WorkerStatusEnum.InActive) throw new Exception(); 
+                if (worker == null) throw new NotFoundException(nameof(Worker), workerId);
+                if (worker.Status == WorkerStatusEnum.InActive) throw new WorkerInactiveException(workerId);
 
 
                 var jobEntity = await _jobRepository.GetNextJobForWorkerAsync(worker.Id);

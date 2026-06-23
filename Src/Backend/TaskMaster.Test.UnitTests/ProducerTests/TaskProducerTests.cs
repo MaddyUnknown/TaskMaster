@@ -45,7 +45,7 @@ public class TaskProducerTests
     public void TaskProducer_WhenStandaloneServicesAreNotInitialised_ShouldThrow()
     {
         // Assert
-        Assert.Throws<Exception>(() => new TaskProducer());
+        Assert.Throws<InvalidOperationException>(() => new TaskProducer());
     }
 
     [Test]

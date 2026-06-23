@@ -1,6 +1,7 @@
 using Moq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Jobs;
@@ -77,7 +78,7 @@ public class JobServiceTests
         var act = () => CreateService().CreateAsync(new CreateJob { JobType = jobType });
 
         // Assert
-        Assert.ThrowsAsync<Exception>(async () => await act());
+        Assert.ThrowsAsync<NotFoundException>(async () => await act());
 
         _jobCrudRepository.Verify(r => r.Add(It.IsAny<Job>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveAsync(), Times.Never);
@@ -203,7 +204,7 @@ public class JobServiceTests
         var act = () => CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId);
 
         // Assert
-        Assert.ThrowsAsync<Exception>(async () => await act());
+        Assert.ThrowsAsync<WorkerInactiveException>(async () => await act());
 
         _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.Id), Times.Never);
     }

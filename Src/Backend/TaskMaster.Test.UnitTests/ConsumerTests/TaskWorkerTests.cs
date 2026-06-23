@@ -101,7 +101,7 @@ public class TaskWorkerTests
     public void WorkerFactory_WhenStandaloneServicesNotInitialised_ShouldThrow()
     {
         // Assert
-        Assert.Throws<Exception>(() => _ = new TaskWorkerFactory());
+        Assert.Throws<InvalidOperationException>(() => _ = new TaskWorkerFactory());
     }
 
     [Test]

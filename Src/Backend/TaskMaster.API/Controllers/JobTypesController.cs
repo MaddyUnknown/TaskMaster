@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TaskMaster.API.Entities;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Controllers
@@ -18,42 +21,25 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("")]
-        public async Task<ActionResult<JobTypeDetails?>> Create(CreateJobType createJob)
+        public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Create(CreateJobType createJob)
         {
-            try
-            {
-                var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
-                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} created", jobType.Name, jobType.Version);
-                return Ok(jobType);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Job type creation failed for {JobTypeName} v{JobTypeVersion}",
-                    createJob.Name, createJob.Version);
-                return StatusCode(500);
-            }
+            var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
+            _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} created", jobType.Name, jobType.Version);
+            return Ok(ApiResponse<JobTypeDetails>.Success(jobType));
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<JobTypeDetails>> Get([FromQuery] string name, [FromQuery] long version)
+        public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Get([FromQuery] string name, [FromQuery] long version)
         {
-            try
+            var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
+            if (jobType == null)
             {
-                var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
-                if (jobType == null)
-                {
-                    _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
-                    return NotFound();
-                }
+                _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
+                throw new NotFoundException(nameof(JobType), (name, version));
+            }
 
-                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
-                return Ok(jobType);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Job type retrieval failed for {JobTypeName} v{JobTypeVersion}", name, version);
-                return StatusCode(500);
-            }
+            _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
+            return Ok(ApiResponse<JobTypeDetails>.Success(jobType));
         }
     }
 }

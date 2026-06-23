@@ -21,14 +21,14 @@ namespace TaskMaster.API.Data
 
         public async Task BeginTransactionAsync()
         {
-            if (_dbTransaction != null) throw new Exception();
+            if (_dbTransaction != null) throw new InvalidOperationException("A transaction is already in progress.");
 
             _dbTransaction = await _context.Database.BeginTransactionAsync();
         }
 
         public async Task CommitTransactionAsync()
         {
-            if (_dbTransaction == null) throw new Exception();
+            if (_dbTransaction == null) throw new InvalidOperationException("No transaction in progress.");
 
             await _dbTransaction.CommitAsync();
             _dbTransaction?.Dispose();
@@ -37,7 +37,7 @@ namespace TaskMaster.API.Data
 
         public async Task RollbackTransactionAsync()
         {
-            if (_dbTransaction == null) throw new Exception();
+            if (_dbTransaction == null) throw new InvalidOperationException("No transaction in progress.");
 
             await _dbTransaction.RollbackAsync();
             _dbTransaction?.Dispose();

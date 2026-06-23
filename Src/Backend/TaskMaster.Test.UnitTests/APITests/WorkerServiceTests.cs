@@ -3,6 +3,7 @@ using Moq;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Workers;
@@ -97,7 +98,7 @@ public class WorkerServiceTests
         var act = () => CreateService().RegisterAsync(request);
 
         // Assert
-        Assert.ThrowsAsync<Exception>(async () => await act());
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
 
         _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Never);
     }
@@ -146,11 +147,14 @@ public class WorkerServiceTests
         var act = () => CreateService().RemoveAsync(workerId);
 
         // Assert
-        Assert.ThrowsAsync<Exception>(async () => await act());
+        Assert.ThrowsAsync<NotFoundException>(async () => await act());
 
         _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Never);
         _jobRepository.Verify(r => r.UnassignJobForWorkerIdAsync(It.IsAny<long>()), Times.Never);
     }
+
+
+
 
 
 

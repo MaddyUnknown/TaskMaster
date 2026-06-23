@@ -8,13 +8,13 @@ namespace TaskMaster.Library.Consumer
     public sealed class TaskMasterConsumer : IDisposable
     {
         private static TaskMasterConsumer? _instance;
-        internal static ServiceProvider ServiceProducer => _instance?._serviceProvider ?? throw new Exception(ErrorMessage.ConsumerServiceNotInitialised());
+        internal static ServiceProvider ServiceProducer => _instance?._serviceProvider ?? throw new InvalidOperationException(ErrorMessage.ConsumerServiceNotInitialised());
 
         private ServiceProvider? _serviceProvider;
 
         public static TaskMasterConsumer Initialise(Action<TaskMasterConsumerOptions> configure)
         {
-            if (_instance != null) throw new Exception(ErrorMessage.ConsumerServiceAlreadyInitialised());
+            if (_instance != null) throw new InvalidOperationException(ErrorMessage.ConsumerServiceAlreadyInitialised());
 
             _instance = new TaskMasterConsumer(configure);
             return _instance;

@@ -9,14 +9,14 @@ namespace TaskMaster.Library.Producer
     {
         // Static
         private static TaskMasterProducer? _instance;
-        internal static ServiceProvider ServiceProducer => _instance?._serviceProvider ?? throw new Exception(ErrorMessage.ProducerServiceNotInitialised());
+        internal static ServiceProvider ServiceProducer => _instance?._serviceProvider ?? throw new InvalidOperationException(ErrorMessage.ProducerServiceNotInitialised());
 
         // Instance
         private ServiceProvider? _serviceProvider;
 
         public static TaskMasterProducer Initialise(Action<TaskMasterProducerOptions> configure)
         {
-            if (_instance != null) throw new Exception(ErrorMessage.ProducerServiceAlreadyInitialised());
+            if (_instance != null) throw new InvalidOperationException(ErrorMessage.ProducerServiceAlreadyInitialised());
 
             _instance = new TaskMasterProducer(configure);
             return _instance;
