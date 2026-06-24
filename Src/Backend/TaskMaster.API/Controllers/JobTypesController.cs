@@ -29,13 +29,14 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Get([FromQuery] string name, [FromQuery] long version)
+        public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Get([FromQuery] string? name, [FromQuery] long? version)
         {
-            var jobType = await _jobTypeService.GetJobTypeAsync(new JobTypeRef { Name = name, Version = version });
+            var jobTypeRef = new JobTypeRef { Name = name ?? string.Empty, Version = version ?? 0 };
+            var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeRef);
             if (jobType == null)
             {
                 _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
-                throw new NotFoundException(nameof(JobType), (name, version));
+                throw new NotFoundException(nameof(JobType), (name ?? string.Empty, version ?? 0));
             }
 
             _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);

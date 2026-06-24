@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using TaskMaster.API.Configs;
+using TaskMaster.API.Constants;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
@@ -21,8 +22,9 @@ namespace TaskMaster.API.Services
         private IWorkerRepository _workerRepository;
         private IJobRepository _jobRepository;
         private IJobTypeRepository _jobTypeRepository;
-        
-        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IJobTypeRepository jobTypeRepository, IOptions<WorkerConfig> workerConfigOption)
+        private IValidator<RegisterWorker> _registerWorkerValidator;
+
+        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IJobTypeRepository jobTypeRepository, IOptions<WorkerConfig> workerConfigOption, IValidator<RegisterWorker> registerWorkerValidator)
         {
             _unitOfWork = unitOfWork;
             _workerCRUDRepository = workerCRUDRepository;
@@ -31,12 +33,16 @@ namespace TaskMaster.API.Services
             _jobTypeRepository = jobTypeRepository;
 
             _workerConfigOption = workerConfigOption;
+            _registerWorkerValidator = registerWorkerValidator;
         }
 
         public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorker registerWorker)
         {
+            var errors = _registerWorkerValidator.Validate(registerWorker);
+            if (errors.Count > 0) throw new ValidationException(errors);
+
             var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
-            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new ValidationException("One or more job type capabilities do not exist.");
+            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new ValidationException(ErrorMessage.OneOrMoreJobTypeCapabilitiesDoNotExist());
 
             var worker = registerWorker.ToWorker(jobTypes);
             _workerCRUDRepository.Add(worker);
@@ -47,6 +53,8 @@ namespace TaskMaster.API.Services
 
         public async Task<WorkerDetails> RemoveAsync(Guid workerId)
         {
+            if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+
             await _unitOfWork.BeginTransactionAsync();
 
             try
@@ -73,6 +81,8 @@ namespace TaskMaster.API.Services
 
         public async Task<HeartbeatActionStatus> HeartBeatAsync(Guid workerId)
         {
+            if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+
             await _unitOfWork.BeginTransactionAsync();
 
             try

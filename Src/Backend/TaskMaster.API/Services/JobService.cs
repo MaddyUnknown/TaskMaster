@@ -1,6 +1,8 @@
-﻿using TaskMaster.API.Entities;
+﻿using TaskMaster.API.Constants;
+using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
@@ -17,18 +19,23 @@ namespace TaskMaster.API.Services
         private IJobTypeRepository _jobTypeRepository;
         private IRepository<Job> _jobCRUDRepository;
         private IWorkerRepository _workerRepository;
+        private IValidator<CreateJob> _createJobValidator;
 
-        public JobService(IUnitOfWork unitOfWork, IRepository<Job> jobCRUDRepository, IJobTypeRepository jobTypeRepository, IJobRepository jobRepository, IWorkerRepository workerRepository)
+        public JobService(IUnitOfWork unitOfWork, IRepository<Job> jobCRUDRepository, IJobTypeRepository jobTypeRepository, IJobRepository jobRepository, IWorkerRepository workerRepository, IValidator<CreateJob> createJobValidator)
         {
             _unitOfWork = unitOfWork;
             _jobRepository = jobRepository;
             _jobTypeRepository = jobTypeRepository;
             _jobCRUDRepository = jobCRUDRepository;
             _workerRepository = workerRepository;
+            _createJobValidator = createJobValidator;
         }
 
         public async Task<JobDetails> CreateAsync(CreateJob job)
         {
+            var errors = _createJobValidator.Validate(job);
+            if (errors.Count > 0) throw new ValidationException(errors);
+
             var jobTypeEntity = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(job.JobType.Name, job.JobType.Version);
             if (jobTypeEntity == null) throw new NotFoundException(nameof(JobType), (job.JobType.Name, job.JobType.Version));
 
@@ -42,6 +49,11 @@ namespace TaskMaster.API.Services
 
         public async Task<JobDetails> ChangeJobStatusAsync(Guid jobId, JobStatusEnum status, WorkerIdRef workerIdRef)
         {
+            var error = new List<string>();
+            if (jobId == Guid.Empty) error.Add(ErrorMessage.FieldRequired("JobId"));
+            if (workerIdRef.WorkerId == Guid.Empty) error.Add(ErrorMessage.FieldRequired("WorkerId"));
+            if (error.Count > 0) throw new ValidationException(error);
+
             var jobEntity = await _jobRepository.GetByJobPublicIdAndWorkerPublicIdAsync(jobId, workerIdRef.WorkerId);
             if (jobEntity == null) throw new NotFoundException(nameof(Job), jobId);
 
@@ -55,6 +67,8 @@ namespace TaskMaster.API.Services
 
         public async Task<JobDetails?> GetNextWorkerJobsAsync(Guid workerId)
         {
+            if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+
             await _unitOfWork.BeginTransactionAsync();
             
             try

@@ -156,7 +156,7 @@ namespace TaskMaster.Library.Consumer.Workers
                 while (await timer.WaitForNextTickAsync(_heartBeatCancelToken.Token))
                 {
                     var result = await _httpClient.WorkerHeartBeat(_workerDetails.WorkerId);
-                    if (result.ActionStatus != "Ok") throw new InvalidOperationException("Heartbeat failed for worker.");
+                    if (result.ActionStatus != "Ok") throw new InvalidOperationException(ErrorMessage.HeartbeatFailed());
                 }
             });
         }

@@ -4,6 +4,7 @@ using TaskMaster.API.Configs;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Workers;
@@ -19,10 +20,11 @@ public class WorkerServiceTests
     private Mock<IWorkerRepository> _workerRepository = null!;
     private Mock<IJobRepository> _jobRepository = null!;
     private Mock<IJobTypeRepository> _jobTypeRepository = null!;
+    private Mock<IValidator<RegisterWorker>> _registerWorkerValidator = null!;
     private IOptions<WorkerConfig> _workerOptions = null!;
 
     private WorkerService CreateService() =>
-        new(_unitOfWork.Object, _workerCrudRepository.Object, _workerRepository.Object, _jobRepository.Object, _jobTypeRepository.Object, _workerOptions);
+        new(_unitOfWork.Object, _workerCrudRepository.Object, _workerRepository.Object, _jobRepository.Object, _jobTypeRepository.Object, _workerOptions, _registerWorkerValidator.Object);
 
     [SetUp]
     public void SetupMock()
@@ -32,6 +34,10 @@ public class WorkerServiceTests
         _workerRepository = new(MockBehavior.Strict);
         _jobRepository = new(MockBehavior.Strict);
         _jobTypeRepository = new(MockBehavior.Strict);
+        _registerWorkerValidator = new(MockBehavior.Strict);
+        _registerWorkerValidator
+            .Setup(v => v.Validate(It.IsAny<RegisterWorker>()))
+            .Returns(Array.Empty<string>());
         _workerOptions = Options.Create(new WorkerConfig
         {
             HeartBeatIntervalSeconds = 15,

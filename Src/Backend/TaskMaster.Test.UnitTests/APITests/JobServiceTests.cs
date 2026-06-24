@@ -2,6 +2,7 @@ using Moq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Jobs;
@@ -19,9 +20,10 @@ public class JobServiceTests
     private Mock<IJobTypeRepository> _jobTypeRepository = null!;
     private Mock<IJobRepository> _jobRepository = null!;
     private Mock<IWorkerRepository> _workerRepository = null!;
+    private Mock<IValidator<CreateJob>> _createJobValidator = null!;
 
     private JobService CreateService() =>
-        new(_unitOfWork.Object, _jobCrudRepository.Object, _jobTypeRepository.Object, _jobRepository.Object, _workerRepository.Object);
+        new(_unitOfWork.Object, _jobCrudRepository.Object, _jobTypeRepository.Object, _jobRepository.Object, _workerRepository.Object, _createJobValidator.Object);
 
     [SetUp]
     public void SetupMock()
@@ -31,6 +33,10 @@ public class JobServiceTests
         _jobTypeRepository = new(MockBehavior.Strict);
         _jobRepository = new(MockBehavior.Strict);
         _workerRepository = new(MockBehavior.Strict);
+        _createJobValidator = new(MockBehavior.Strict);
+        _createJobValidator
+            .Setup(v => v.Validate(It.IsAny<CreateJob>()))
+            .Returns(Array.Empty<string>());
     }
 
     [Test]

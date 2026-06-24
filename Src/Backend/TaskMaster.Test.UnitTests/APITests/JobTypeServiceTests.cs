@@ -1,5 +1,6 @@
 using Moq;
 using TaskMaster.API.Entities;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.JobTypes;
@@ -12,9 +13,11 @@ public class JobTypeServiceTests
     private Mock<IUnitOfWork> _unitOfWork = null!;
     private Mock<IRepository<JobType>> _repository = null!;
     private Mock<IJobTypeRepository> _jobTypeRepository = null!;
+    private Mock<IValidator<CreateJobType>> _createJobTypeValidator = null!;
+    private Mock<IValidator<JobTypeRef>> _jobTypeRefValidator = null!;
 
     private JobTypeService CreateService() =>
-        new(_unitOfWork.Object, _repository.Object, _jobTypeRepository.Object);
+        new(_unitOfWork.Object, _repository.Object, _jobTypeRepository.Object, _createJobTypeValidator.Object, _jobTypeRefValidator.Object);
 
     [SetUp]
     public void SetupMock()
@@ -22,6 +25,14 @@ public class JobTypeServiceTests
         _unitOfWork = new();
         _repository = new(MockBehavior.Strict);
         _jobTypeRepository = new(MockBehavior.Strict);
+        _createJobTypeValidator = new(MockBehavior.Strict);
+        _createJobTypeValidator
+            .Setup(v => v.Validate(It.IsAny<CreateJobType>()))
+            .Returns(Array.Empty<string>());
+        _jobTypeRefValidator = new(MockBehavior.Strict);
+        _jobTypeRefValidator
+            .Setup(v => v.Validate(It.IsAny<JobTypeRef>()))
+            .Returns(Array.Empty<string>());
     }
 
     [Test]

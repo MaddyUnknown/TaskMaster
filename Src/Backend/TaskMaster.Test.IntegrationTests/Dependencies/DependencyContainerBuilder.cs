@@ -8,11 +8,16 @@ using System.Text;
 using System.Threading.Tasks;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
+using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.JobTypes;
+using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
+using TaskMaster.API.Validation;
 using TaskMaster.Test.IntegrationTests.Factories;
 
 namespace TaskMaster.Test.IntegrationTests.Dependencies
@@ -32,8 +37,6 @@ namespace TaskMaster.Test.IntegrationTests.Dependencies
             var configuration = GetConfiguration();
 
             var services = new ServiceCollection();
-
-            Console.WriteLine(configuration);
 
             // Configuration
             services.AddSingleton(configuration);
@@ -59,6 +62,12 @@ namespace TaskMaster.Test.IntegrationTests.Dependencies
             services.AddTransient<IJobService, JobService>();
             services.AddTransient<IJobTypeService, JobTypeService>();
             services.AddTransient<IWorkerService, WorkerService>();
+
+            // Validators
+            services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();
+            services.AddTransient<IValidator<CreateJobType>, CreateJobTypeValidator>();
+            services.AddTransient<IValidator<RegisterWorker>, RegisterWorkerValidator>();
+            services.AddTransient<IValidator<JobTypeRef>, JobTypeRefValidator>();
 
             services.AddTransient<SqlServerFactory>();
 

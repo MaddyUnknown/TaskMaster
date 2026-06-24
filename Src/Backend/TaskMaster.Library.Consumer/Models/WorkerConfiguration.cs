@@ -1,6 +1,7 @@
 using System.Reflection;
 using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Consumer.Attributes;
+using TaskMaster.Library.Consumer.Constants;
 using TaskMaster.Library.Consumer.Interfaces;
 
 namespace TaskMaster.Library.Consumer.Models
@@ -15,7 +16,7 @@ namespace TaskMaster.Library.Consumer.Models
         {
             var attr = typeof(TPayload).GetCustomAttribute<JobTypeAttribute>()
                 ?? throw new InvalidOperationException(
-                    $"Payload type '{typeof(TPayload).FullName}' must be decorated with JobTypeAttribute.");
+                    ErrorMessage.PayloadTypeMissingAttribute(typeof(TPayload).FullName!));
 
             var key = (attr.Name, attr.Version);
             HandlerMap[key] = new HandlerEntry(typeof(TPayload), typeof(THandler));

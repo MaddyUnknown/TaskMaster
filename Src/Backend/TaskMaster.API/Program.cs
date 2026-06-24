@@ -4,12 +4,15 @@ using Serilog;
 using System.Text.Json.Serialization;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Middleware;
+using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
+using TaskMaster.API.Validation;
 
 namespace TaskMaster.API
 {
@@ -35,6 +38,11 @@ namespace TaskMaster.API
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
                 });
 
+            builder.Services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
+
 
 
             // Db Context
@@ -58,6 +66,12 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IJobService, JobService>();
             builder.Services.AddTransient<IJobTypeService, JobTypeService>();
             builder.Services.AddTransient<IWorkerService, WorkerService>();
+
+            // Validators
+            builder.Services.AddTransient<IValidator<Models.Jobs.CreateJob>, CreateJobValidator>();
+            builder.Services.AddTransient<IValidator<Models.JobTypes.CreateJobType>, CreateJobTypeValidator>();
+            builder.Services.AddTransient<IValidator<Models.Workers.RegisterWorker>, RegisterWorkerValidator>();
+            builder.Services.AddTransient<IValidator<JobTypeRef>, JobTypeRefValidator>();
 
             // Swagger services
             builder.Services.AddEndpointsApiExplorer();

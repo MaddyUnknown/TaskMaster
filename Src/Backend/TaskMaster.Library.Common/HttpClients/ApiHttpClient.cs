@@ -107,7 +107,7 @@ namespace TaskMaster.Library.Common.HttpClients
             if (_httpClient.BaseAddress != null) return;
 
             if (string.IsNullOrWhiteSpace(_apiConfigOption.Value.ApiBaseUrl))
-                throw new InvalidOperationException("TaskMaster API base URL is required.");
+                throw new InvalidOperationException(ErrorMessage.ApiBaseUrlRequired());
 
             _httpClient.BaseAddress = new Uri(_apiConfigOption.Value.ApiBaseUrl);
         }
@@ -122,7 +122,7 @@ namespace TaskMaster.Library.Common.HttpClients
             catch (HttpRequestException ex) when (ex.StatusCode is null)
             {
                 throw new InvalidOperationException(
-                    $"Network error calling '{endpoint}': {ex.Message}", ex);
+                    ErrorMessage.NetworkError(endpoint, ex.Message), ex);
             }
         }
 
@@ -136,9 +136,9 @@ namespace TaskMaster.Library.Common.HttpClients
             }
 
             var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<T>>();
-            if (wrapper == null) throw new InvalidOperationException("API returned an empty response.");
+            if (wrapper == null) throw new InvalidOperationException(ErrorMessage.ApiEmptyResponse());
 
-            if (!wrapper.IsSuccess) throw new InvalidOperationException(string.Join("; ", wrapper.ErrorMessages));
+            if (!wrapper.IsSuccess) throw new InvalidOperationException(ErrorMessage.ApiRequestFailed(string.Join("; ", wrapper.ErrorMessages)));
 
             return wrapper;
         }
@@ -157,7 +157,7 @@ namespace TaskMaster.Library.Common.HttpClients
 
             }
 
-            return $"API returned status code {(int)response.StatusCode}.";
+            return ErrorMessage.ApiUnexpectedStatusCode((int)response.StatusCode);
         }
     }
 }
