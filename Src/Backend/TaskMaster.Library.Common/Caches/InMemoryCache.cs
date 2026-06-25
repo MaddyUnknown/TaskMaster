@@ -1,42 +1,52 @@
-﻿using TaskMaster.Library.Common.Interfaces.Caches;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaskMaster.Library.Common.Constants;
+﻿using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using TaskMaster.Library.Common.Interfaces.Caches;
 
 namespace TaskMaster.Library.Common.Caches
 {
     internal class InMemoryCache : ICache
     {
-        private ConcurrentDictionary<string, object> _cache;
+        private readonly MemoryCache _cache;
+        private readonly long _maxEntries;
+        private readonly double _compactPercentage;
 
-        public InMemoryCache()
+        public InMemoryCache(MemoryCache cache, IOptions<MemoryCacheOptions> options)
         {
-            _cache = new ConcurrentDictionary<string, object>();
+            _cache = cache;
+            _maxEntries = (long) (options.Value.SizeLimit ?? 200);
+            _compactPercentage = options.Value.CompactionPercentage;
         }
 
-        public T GetOrAdd<T>(string key, Func<T>? factory = null)
+        public T GetOrAdd<T>(string key, Func<T> factory, TimeSpan? expiry = null)
         {
-            if (_cache.TryGetValue(key, out var value))
-            {
-                return (T)value;
-            }
+            if (_cache.TryGetValue(key, out var value)) return (T)value!;
 
-            if (factory == null)
-            {
-                throw new InvalidOperationException(ErrorMessage.CacheKeyNotFound(key));
-            }
+            if (_cache.Count >= _maxEntries) _cache.Compact(percentage: _compactPercentage);
 
-            var createdValue = factory();
-            if (createdValue == null)
+            return _cache.GetOrCreate(key, entry =>
             {
-                throw new InvalidOperationException(ErrorMessage.CacheKeyNotFound(key));
-            }
+                entry.Size = 1;
+                entry.Priority = CacheItemPriority.Normal;
+                if (expiry.HasValue) entry.AbsoluteExpirationRelativeToNow = expiry;
 
-            return (T)_cache.GetOrAdd(key, createdValue);
+                return factory();
+            })!;
+        }
+
+        public async Task<T> GetOrAddAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiry = null)
+        {
+            if (_cache.TryGetValue(key, out var value)) return (T)value!;
+
+            if (_cache.Count >= _maxEntries) _cache.Compact(percentage: _compactPercentage);
+
+            return (await _cache.GetOrCreateAsync(key, async entry =>
+            {
+                entry.Size = 1;
+                entry.Priority = CacheItemPriority.Normal;
+                if (expiry.HasValue) entry.AbsoluteExpirationRelativeToNow = expiry;
+
+                return await factory();
+            }))!;
         }
     }
 }

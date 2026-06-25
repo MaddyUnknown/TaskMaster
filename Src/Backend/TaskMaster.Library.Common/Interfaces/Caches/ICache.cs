@@ -1,13 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace TaskMaster.Library.Common.Interfaces.Caches
+﻿namespace TaskMaster.Library.Common.Interfaces.Caches
 {
     internal interface ICache
     {
-        T GetOrAdd<T>(string key, Func<T>? factory = null);
+        T GetOrAdd<T>(string key, Func<T> factory, TimeSpan? expiry = null);
+
+        Task<T> GetOrAddAsync<T>(string key, Func<Task<T>> factory, TimeSpan? expiry = null);
     }
 }

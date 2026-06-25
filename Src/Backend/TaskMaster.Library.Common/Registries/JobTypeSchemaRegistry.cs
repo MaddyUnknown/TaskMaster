@@ -15,21 +15,23 @@ namespace TaskMaster.Library.Common.Registries
     {
         private IApiHttpClient _httpClient;
         private ICache _cache;
+        private int _schemaCacheTTLMin;
 
-        public JobTypeSchemaRegistry(IApiHttpClient apiHttpClient, ICache cache)
+        public JobTypeSchemaRegistry(IApiHttpClient apiHttpClient, ICache cache, int schemaCacheTTLMin = 5)
         {
             _httpClient = apiHttpClient;
             _cache = cache;
+            _schemaCacheTTLMin = schemaCacheTTLMin;
         }
 
         public async Task<string> GetByJobTypeNameAndVersion(string jobTypeName, long jobTypeVersion)
         {
-            var schema = await _cache.GetOrAdd(CacheKey.JobType(jobTypeName, jobTypeVersion), async () =>
+            var schema = await _cache.GetOrAddAsync(CacheKey.JobType(jobTypeName, jobTypeVersion), async () =>
             {
                 var request = new GetJobTypeRequest { JobTypeName = jobTypeName, JobTypeVersion = jobTypeVersion };
                 var response = await _httpClient.GetJobType(request);
                 return response?.Schema;
-            });
+            }, TimeSpan.FromMinutes(_schemaCacheTTLMin));
 
             if (schema == null) throw new InvalidOperationException(ErrorMessage.JobTypeNotFound(jobTypeName, jobTypeVersion));
             return schema;
