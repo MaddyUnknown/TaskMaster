@@ -157,7 +157,7 @@ public class JobServiceTests
     }
 
     [Test]
-    public async Task ChangeJobStatusAsync_WhenJobNotExists_ShouldThrowException()
+    public void ChangeJobStatusAsync_WhenJobNotExists_ShouldThrowException()
     {
         // Arrange
         var workerId = Guid.NewGuid();
