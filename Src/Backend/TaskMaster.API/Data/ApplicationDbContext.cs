@@ -55,7 +55,15 @@ namespace TaskMaster.API.Data
                 .HasForeignKey(j => j.AssignedWorkerId);
 
             var workerExpiryIntervalSec = _workerConfigOption.Value.WorkerExpiryIntervalSeconds;
-            modelBuilder.Entity<Worker>().Property<DateTime>("WorkerExpiresAtTimestamp").HasColumnType("datetime2").HasDefaultValueSql($"DATEADD(SECOND, {workerExpiryIntervalSec}, SYSDATETIME())");
+            modelBuilder.Entity<Worker>()
+                .Property(w => w.WorkerExpiresAtTimestamp)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql($"DATEADD(SECOND, {workerExpiryIntervalSec}, SYSDATETIME())");
+
+            modelBuilder.Entity<Worker>()
+                .Property(w => w.LastHeartBeatTimestamp)
+                .HasColumnType("datetime2")
+                .HasDefaultValueSql("SYSDATETIME()");
 
             // WorkerCapability Setup
             modelBuilder.Entity<WorkerCapability>()

@@ -6,5 +6,6 @@ namespace TaskMaster.API.Interfaces.Repositories
     {
         Task<Worker?> GetByPublicIdAsync(Guid workerPublicId);
         Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds);
+        Task<IEnumerable<Worker>> GetAllWorkersAsync();
     }
 }

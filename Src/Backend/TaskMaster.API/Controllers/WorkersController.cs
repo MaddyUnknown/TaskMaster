@@ -18,6 +18,27 @@ namespace TaskMaster.API.Controllers
             _logger = logger;
         }
 
+        [HttpGet("")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<WorkerDetails>>>> GetAll()
+        {
+            var workers = await _workerService.GetAllWorkersAsync();
+            _logger.LogInformation("Retrieved {WorkerCount} workers", workers.Count());
+            return Ok(ApiResponse<IEnumerable<WorkerDetails>>.Success(workers));
+        }
+
+        [HttpGet("{workerId}")]
+        public async Task<ActionResult<ApiResponse<WorkerDetails?>>> GetById(Guid workerId)
+        {
+            var worker = await _workerService.GetWorkerByPublicIdAsync(workerId);
+            if (worker == null)
+            {
+                _logger.LogWarning("Worker {WorkerId} not found", workerId);
+                return NotFound(ApiResponse<WorkerDetails?>.Fail($"Worker with id '{workerId}' not found"));
+            }
+            _logger.LogInformation("Retrieved worker {WorkerId}", workerId);
+            return Ok(ApiResponse<WorkerDetails?>.Success(worker));
+        }
+
         [HttpPost("register")]
         public async Task<ActionResult<ApiResponse<RegisterWorkerResponse>>> Register(RegisterWorker registerWorker)
         {

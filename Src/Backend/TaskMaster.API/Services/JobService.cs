@@ -65,6 +65,19 @@ namespace TaskMaster.API.Services
             return jobEntity.ToJobDetails();
         }
 
+        public async Task<IEnumerable<JobDetails>> GetAllJobsAsync()
+        {
+            var jobs = await _jobRepository.GetAllJobsAsync();
+            return jobs.Select(j => j.ToJobDetails());
+        }
+
+        public async Task<JobDetails?> GetJobByPublicIdAsync(Guid jobId)
+        {
+            if (jobId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("JobId"));
+            var job = await _jobRepository.GetByJobPublicIdAsync(jobId);
+            return job?.ToJobDetails();
+        }
+
         public async Task<JobDetails?> GetNextWorkerJobsAsync(Guid workerId)
         {
             if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));

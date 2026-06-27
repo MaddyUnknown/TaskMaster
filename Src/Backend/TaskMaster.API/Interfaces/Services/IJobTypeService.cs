@@ -6,5 +6,6 @@ namespace TaskMaster.API.Interfaces.Services
     {
         Task<JobTypeDetails> CreateJobTypeAsync(CreateJobType jobType);
         Task<JobTypeDetails?> GetJobTypeAsync(JobTypeRef jobType);
+        Task<IEnumerable<JobTypeDetails>> GetAllJobTypesAsync();
     }
 }

@@ -12,8 +12,14 @@ namespace TaskMaster.API.Entities
         [Required]
         public string WorkerName { get; set; } = string.Empty;
 
+        public string? WorkerDisplayName { get; set; }
+
         [Required]
         public WorkerStatusEnum Status { get; set; }
+
+        public DateTime LastHeartBeatTimestamp { get; set; }
+
+        public DateTime WorkerExpiresAtTimestamp { get; set; }
 
         //Navigation Property
         public ICollection<Job> AssignedJobs { get; set; } = null!;

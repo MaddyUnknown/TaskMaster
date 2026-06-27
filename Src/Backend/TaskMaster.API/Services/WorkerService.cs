@@ -4,6 +4,7 @@ using TaskMaster.API.Constants;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
@@ -77,6 +78,19 @@ namespace TaskMaster.API.Services
                 await _unitOfWork.RollbackTransactionAsync();
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<WorkerDetails>> GetAllWorkersAsync()
+        {
+            var workers = await _workerRepository.GetAllWorkersAsync();
+            return workers.Select(w => w.ToWorkerDetails());
+        }
+
+        public async Task<WorkerDetails?> GetWorkerByPublicIdAsync(Guid workerId)
+        {
+            if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+            var worker = await _workerRepository.GetByPublicIdAsync(workerId);
+            return worker?.ToWorkerDetails();
         }
 
         public async Task<HeartbeatActionStatus> HeartBeatAsync(Guid workerId)

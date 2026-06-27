@@ -1,5 +1,4 @@
-﻿using TaskMaster.API.Enums;
-using TaskMaster.API.Models.JobTypes;
+﻿using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Models.Jobs
 {

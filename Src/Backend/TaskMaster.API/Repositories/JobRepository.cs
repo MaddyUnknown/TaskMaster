@@ -14,6 +14,16 @@ namespace TaskMaster.API.Repositories
             _context = context;
         }
 
+        public async Task<Job?> GetByJobPublicIdAsync(Guid jobPublicId)
+        {
+            return await _context.Jobs.Include(j => j.JobType).Where(j => j.JobPublicId == jobPublicId).FirstOrDefaultAsync();
+        }
+
+        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+        {
+            return await _context.Jobs.Include(j => j.JobType).OrderByDescending(j => j.Id).ToListAsync();
+        }
+
         public async Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId)
         {
             var workerId = await _context.Workers.Where(w => w.WorkerPublicId == workerPublicId).Select(w => w.Id).FirstOrDefaultAsync();

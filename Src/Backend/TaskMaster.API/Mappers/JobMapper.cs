@@ -20,12 +20,17 @@ namespace TaskMaster.API.Mappers
 
         public static JobDetails ToJobDetails(this Job jobEntity)
         {
+            var jobType = jobEntity.JobType;
             return new JobDetails
             {
                 JobId = jobEntity.JobPublicId,
-                JobType = (jobEntity.JobType == null) ? JobTypeRef.Empty : new JobTypeRef { Name = jobEntity.JobType.Name, Version = jobEntity.JobType.Version },
+                JobType = (jobType == null) ? JobTypeRef.Empty : new JobTypeRef { Name = jobType.Name, Version = jobType.Version },
                 Payload = jobEntity.Payload,
-                Status = jobEntity.Status
+                Status = jobEntity.Status,
+                CreatedDateTime = jobEntity.CreatedDateTime,
+                ModifyDateTime = jobEntity.ModifyDateTime,
+                CompletedDateTime = jobEntity.Status == JobStatusEnum.Completed ? jobEntity.ModifyDateTime : null,
+                FailDateTime = jobEntity.Status == JobStatusEnum.Failed ? jobEntity.ModifyDateTime : null,
             };
         }
     }

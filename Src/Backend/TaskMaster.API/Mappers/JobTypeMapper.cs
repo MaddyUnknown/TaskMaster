@@ -1,5 +1,4 @@
 ﻿using TaskMaster.API.Entities;
-using TaskMaster.API.Enums;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 
@@ -13,7 +12,8 @@ namespace TaskMaster.API.Mappers
             {
                 Name = createJobTypeRequest.Name,
                 Version = createJobTypeRequest.Version,
-                Schema = createJobTypeRequest.Schema
+                Schema = createJobTypeRequest.Schema,
+                Description = createJobTypeRequest.Description
             };
         }
 
@@ -23,7 +23,10 @@ namespace TaskMaster.API.Mappers
             {
                 Name = jobType.Name,
                 Version = jobType.Version,
-                Schema = jobType.Schema
+                Schema = jobType.Schema,
+                Description = jobType.Description,
+                CreatedDateTime = jobType.CreatedDateTime,
+                ModifyDateTime = jobType.ModifyDateTime
             };
         }
     }

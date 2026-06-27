@@ -1,4 +1,4 @@
-﻿namespace TaskMaster.API.Enums
+namespace TaskMaster.API.Models.Enums
 {
     public enum ActionStatusEnum
     {

@@ -6,10 +6,12 @@ using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Middleware;
 using TaskMaster.API.Models.JobTypes;
+using TaskMaster.API.Queries;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
 using TaskMaster.API.Validation;
@@ -66,6 +68,8 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IJobService, JobService>();
             builder.Services.AddTransient<IJobTypeService, JobTypeService>();
             builder.Services.AddTransient<IWorkerService, WorkerService>();
+            builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
+            builder.Services.AddTransient<IDashboardService, DashboardService>();
 
             // Validators
             builder.Services.AddTransient<IValidator<Models.Jobs.CreateJob>, CreateJobValidator>();

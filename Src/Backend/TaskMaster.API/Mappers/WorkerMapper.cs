@@ -6,6 +6,8 @@ using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Mappers
 {
+    using TaskMaster.API.Models.Workers;
+
     public static class WorkerMapper
     {
         public static Worker ToWorker(this RegisterWorker request, IEnumerable<JobType> jobTypes)
@@ -14,6 +16,7 @@ namespace TaskMaster.API.Mappers
             {
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = request.WorkerName,
+                WorkerDisplayName = string.IsNullOrEmpty(request.WorkerDisplayName) ? request.WorkerName : request.WorkerDisplayName,
                 WorkerCapabilities = jobTypes.Select(t => new WorkerCapability { JobType = t }).ToList(),
                 Status = WorkerStatusEnum.Active,
             };
@@ -25,8 +28,18 @@ namespace TaskMaster.API.Mappers
             {
                 WorkerId = worker.WorkerPublicId,
                 WorkerName = worker.WorkerName,
+                WorkerDisplayName = worker.WorkerDisplayName,
                 Status = worker.Status,
-                JobTypeCapabilities = worker.WorkerCapabilities.Where(w => w?.JobType != null).Select(w => new JobTypeRef { Name = w.JobType.Name, Version = w.JobType.Version }).ToArray()
+                WorkerExpiresAtTimestamp = worker.WorkerExpiresAtTimestamp,
+                LastHeartBeatTimestamp = worker.LastHeartBeatTimestamp,
+                CreatedDateTime = worker.CreatedDateTime,
+                JobTypeCapabilities = worker.WorkerCapabilities
+                    .Where(w => w?.JobType != null)
+                    .Select(w => new JobTypeRef
+                    {
+                        Name = w.JobType.Name,
+                        Version = w.JobType.Version
+                    }).ToArray()
             };
         }
         

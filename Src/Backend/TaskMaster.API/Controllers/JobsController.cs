@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using System;
+using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Jobs;
@@ -18,6 +21,27 @@ namespace TaskMaster.API.Controllers
         {
             _jobService = jobService;
             _logger = logger;
+        }
+
+        [HttpGet("")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobDetails>>>> GetAll()
+        {
+            var jobs = await _jobService.GetAllJobsAsync();
+            _logger.LogInformation("Retrieved {JobCount} jobs", jobs.Count());
+            return Ok(ApiResponse<IEnumerable<JobDetails>>.Success(jobs));
+        }
+
+        [HttpGet("{jobId}")]
+        public async Task<ActionResult<ApiResponse<JobDetails?>>> GetById(Guid jobId)
+        {
+            var job = await _jobService.GetJobByPublicIdAsync(jobId);
+            if (job == null)
+            {
+                _logger.LogWarning("Job {JobId} not found", jobId);
+                return NotFound(ApiResponse<JobDetails?>.Fail($"Job with id '{jobId}' not found"));
+            }
+            _logger.LogInformation("Retrieved job {JobId}", jobId);
+            return Ok(ApiResponse<JobDetails?>.Success(job));
         }
 
         [HttpPost("pull")]
@@ -48,8 +72,7 @@ namespace TaskMaster.API.Controllers
         public async Task<ActionResult<ApiResponse<JobDetails>>> Create(CreateJob jobCreateRequest)
         {
             var job = await _jobService.CreateAsync(jobCreateRequest);
-            _logger.LogInformation("Job {JobId} created for job type {JobTypeName} v{JobTypeVersion}",
-                job.JobId, jobCreateRequest.JobType.Name, jobCreateRequest.JobType.Version);
+            _logger.LogInformation("Job {JobId} created for job type {JobTypeName} v{JobTypeVersion}", job.JobId, jobCreateRequest.JobType.Name, jobCreateRequest.JobType.Version);
             return Ok(ApiResponse<JobDetails>.Success(job));
         }
     }

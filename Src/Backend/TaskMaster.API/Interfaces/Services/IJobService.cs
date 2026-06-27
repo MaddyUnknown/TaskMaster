@@ -9,5 +9,7 @@ namespace TaskMaster.API.Interfaces.Services
         Task<JobDetails> CreateAsync(CreateJob job);
         Task<JobDetails> ChangeJobStatusAsync(Guid jobId, JobStatusEnum status, WorkerIdRef workerIdRef);
         Task<JobDetails?> GetNextWorkerJobsAsync(Guid workerId);
+        Task<IEnumerable<JobDetails>> GetAllJobsAsync();
+        Task<JobDetails?> GetJobByPublicIdAsync(Guid jobId);
     }
 }

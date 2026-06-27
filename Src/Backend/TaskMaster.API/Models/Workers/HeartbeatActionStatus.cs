@@ -1,4 +1,4 @@
-﻿using TaskMaster.API.Enums;
+﻿using TaskMaster.API.Models.Enums;
 
 namespace TaskMaster.API.Models.Workers
 {

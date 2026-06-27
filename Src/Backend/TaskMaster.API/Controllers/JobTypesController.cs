@@ -3,6 +3,7 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
+using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Controllers
@@ -29,18 +30,24 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Get([FromQuery] string? name, [FromQuery] long? version)
+        public async Task<ActionResult<ApiResponse<object>>> GetAll([FromQuery] string? name, [FromQuery] long? version)
         {
-            var jobTypeRef = new JobTypeRef { Name = name ?? string.Empty, Version = version ?? 0 };
-            var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeRef);
-            if (jobType == null)
+            if (name != null && version.HasValue)
             {
-                _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
-                throw new NotFoundException(nameof(JobType), (name ?? string.Empty, version ?? 0));
+                var jobTypeRef = new JobTypeRef { Name = name, Version = version.Value };
+                var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeRef);
+                if (jobType == null)
+                {
+                    _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
+                    return NotFound(ApiResponse<object>.Fail($"Job type '{name} v{version}' not found"));
+                }
+                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
+                return Ok(ApiResponse<object>.Success(jobType));
             }
 
-            _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
-            return Ok(ApiResponse<JobTypeDetails>.Success(jobType));
+            var allJobTypes = await _jobTypeService.GetAllJobTypesAsync();
+            _logger.LogInformation("Retrieved {JobTypeCount} job types", allJobTypes.Count());
+            return Ok(ApiResponse<object>.Success(allJobTypes));
         }
     }
 }

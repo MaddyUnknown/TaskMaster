@@ -4,6 +4,7 @@ using TaskMaster.API.Configs;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
+using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;

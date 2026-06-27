@@ -1,4 +1,5 @@
-﻿using TaskMaster.API.Data;
+﻿using Microsoft.EntityFrameworkCore;
+using TaskMaster.API.Data;
 using TaskMaster.API.Entities.Abstractions;
 using TaskMaster.API.Interfaces.Repositories;
 
@@ -22,5 +23,9 @@ namespace TaskMaster.API.Repositories
         {
             //Nothing to be done for ef core as data is traced.
         }
+
+        public async Task<T?> GetByIdAsync(long id) => await _context.Set<T>().FindAsync(id);
+
+        public async Task<IEnumerable<T>> GetAllAsync() => await _context.Set<T>().ToListAsync();
     }
 }

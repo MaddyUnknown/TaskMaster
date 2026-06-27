@@ -6,5 +6,6 @@ namespace TaskMaster.API.Interfaces.Repositories
     {
         Task<JobType?> GetByJobTypeNameAndVersionAsync(string jobTypeName, long jobTypeVersion);
         Task<IEnumerable<JobType>> GetByJobTypeNameAndVersionAsync(IEnumerable<(string jobTypeName, long jobTypeVersion)> jobTypes);
+        Task<IEnumerable<JobType>> GetAllJobTypesAsync();
     }
 }

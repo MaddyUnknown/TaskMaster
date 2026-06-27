@@ -29,5 +29,10 @@ namespace TaskMaster.API.Repositories
             var candidates = await _context.JobTypes.Where(j => names.Contains(j.Name)).ToListAsync();
             return candidates.Where(j => requested.Contains((j.Name, j.Version)));
         }
+
+        public async Task<IEnumerable<JobType>> GetAllJobTypesAsync()
+        {
+            return await _context.JobTypes.OrderByDescending(j => j.Id).ToListAsync();
+        }
     }
 }

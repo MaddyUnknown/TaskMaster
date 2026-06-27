@@ -13,5 +13,7 @@ namespace TaskMaster.API.Entities
 
         [Required]
         public string Schema { get; set; } = string.Empty;
+
+        public string? Description { get; set; }
     }
 }

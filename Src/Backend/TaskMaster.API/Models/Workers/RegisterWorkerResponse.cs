@@ -1,6 +1,4 @@
-﻿using TaskMaster.API.Enums;
-
-namespace TaskMaster.API.Models.Workers
+﻿namespace TaskMaster.API.Models.Workers
 {
     public class RegisterWorkerResponse
     {

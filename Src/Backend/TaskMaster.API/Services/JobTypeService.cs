@@ -39,6 +39,12 @@ namespace TaskMaster.API.Services
             return jobTypeEntity.ToJobTypeDetails();
         }
 
+        public async Task<IEnumerable<JobTypeDetails>> GetAllJobTypesAsync()
+        {
+            var jobTypes = await _jobTypeRepository.GetAllJobTypesAsync();
+            return jobTypes.Select(j => j.ToJobTypeDetails());
+        }
+
         public async Task<JobTypeDetails?> GetJobTypeAsync(JobTypeRef jobType)
         {
             var errors = _jobTypeRefValidator.Validate(jobType);

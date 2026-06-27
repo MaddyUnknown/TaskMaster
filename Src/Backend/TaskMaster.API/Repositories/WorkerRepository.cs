@@ -18,6 +18,11 @@ namespace TaskMaster.API.Repositories
             return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).Where(w => w.WorkerPublicId == workerPublicId).FirstOrDefaultAsync();
         }
 
+        public async Task<IEnumerable<Worker>> GetAllWorkersAsync()
+        {
+            return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).OrderByDescending(w => w.Id).ToListAsync();
+        }
+
         public async Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
             FormattableString sql = $@"
