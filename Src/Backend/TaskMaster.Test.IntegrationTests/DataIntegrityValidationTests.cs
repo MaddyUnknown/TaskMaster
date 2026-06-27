@@ -93,6 +93,5 @@ public class DataIntegrityValidationTests : IntegrationTestBase
     {
         public const string DeleteWorkers = """DELETE FROM Workers""";
         public const string DeleteJobTypes = """DELETE FROM JobTypes""";
-
     }
 }

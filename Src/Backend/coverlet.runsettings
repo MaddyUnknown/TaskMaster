@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Exclude>
+            [TaskMaster.API]TaskMaster.API.Configs.*,
+            [TaskMaster.API]TaskMaster.API.Constants.*,
+            [TaskMaster.API]TaskMaster.API.Controllers.*,
+            [TaskMaster.API]TaskMaster.API.Entities.*,
+            [TaskMaster.API]TaskMaster.API.Enums.*,
+            [TaskMaster.API]TaskMaster.API.Exceptions.*,
+            [TaskMaster.API]TaskMaster.API.Interfaces.*,
+            [TaskMaster.API]TaskMaster.API.Mappers.*,
+            [TaskMaster.API]TaskMaster.API.Middleware.*,
+            [TaskMaster.API]TaskMaster.API.Migrations.*,
+            [TaskMaster.API]TaskMaster.API.Models.*,
+            [TaskMaster.API]TaskMaster.API.Utils.*,
+            [TaskMaster.API]TaskMaster.API.Program,
+            [TaskMaster.API]TaskMaster.API.Validation.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.Attributes.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.Configs.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.Constants.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.DependencyInjection.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.HttpClients.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.Interfaces.*,
+            [TaskMaster.Library.Common]TaskMaster.Library.Common.Models.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.Attributes.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.Configs.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.Constants.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.DependencyInjection.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.Interfaces.*,
+            [TaskMaster.Library.Consumer]TaskMaster.Library.Consumer.Models.*,
+            [TaskMaster.Library.Producer]TaskMaster.Library.Producer.Attributes.*,
+            [TaskMaster.Library.Producer]TaskMaster.Library.Producer.Configs.*,
+            [TaskMaster.Library.Producer]TaskMaster.Library.Producer.Constants.*,
+            [TaskMaster.Library.Producer]TaskMaster.Library.Producer.DependencyInjection.*,
+            [TaskMaster.Library.Producer]TaskMaster.Library.Producer.Interfaces.*,
+            [TaskMaster.Tests]*,
+            [TaskMaster.IntegrationTests]*
+          </Exclude>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

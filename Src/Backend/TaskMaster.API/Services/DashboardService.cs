@@ -28,7 +28,7 @@ namespace TaskMaster.API.Services
                     _ => ActivityStatus.Info
                 };
 
-                var message = $"{j.JobType?.Name ?? "Unknown"} job {GetStatusText(j.Status)}";
+                var message = $"{j.JobType.Name} job {j.Status.ToString()}";
 
                 return new ActivityItem
                 {
@@ -97,13 +97,5 @@ namespace TaskMaster.API.Services
                 }
             };
         }
-
-        private static string GetStatusText(JobStatusEnum status) => status switch
-        {
-            JobStatusEnum.Completed => "completed",
-            JobStatusEnum.Failed => "failed",
-            JobStatusEnum.InProgress => "started",
-            _ => "queued"
-        };
     }
 }

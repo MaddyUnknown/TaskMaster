@@ -80,14 +80,28 @@ public class JobServiceTests
             .Setup(r => r.GetByJobTypeNameAndVersionAsync(jobType.Name, jobType.Version))
             .ReturnsAsync((JobType?)null);
 
-        // Act
+        // Act + Assert
         var act = () => CreateService().CreateAsync(new CreateJob { JobType = jobType });
 
-        // Assert
         Assert.ThrowsAsync<NotFoundException>(async () => await act());
 
         _jobCrudRepository.Verify(r => r.Add(It.IsAny<Job>()), Times.Never);
         _unitOfWork.Verify(u => u.SaveAsync(), Times.Never);
+    }
+
+    [Test]
+    public void CreateAsync_WhenValidationFails_ShouldThrowException()
+    {
+        // Arrange
+        _createJobValidator
+            .Setup(v => v.Validate(It.IsAny<CreateJob>()))
+            .Returns(["Invalid payload"]);
+
+        var request = new CreateJob { JobType = ServiceTestData.EmailJobTypeRef, Payload = "{}" };
+
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().CreateAsync(request));
+        _jobCrudRepository.Verify(r => r.Add(It.IsAny<Job>()), Times.Never);
     }
 
     [Test]
@@ -140,6 +154,45 @@ public class JobServiceTests
         Assert.That(job.Status, Is.EqualTo(JobStatusEnum.Failed));
 
         _jobCrudRepository.Verify(r => r.Update(It.Is<Job>(j => j.Id == job.Id)), Times.Once);
+    }
+
+    [Test]
+    public async Task ChangeJobStatusAsync_WhenJobNotExists_ShouldThrowException()
+    {
+        // Arrange
+        var workerId = Guid.NewGuid();
+        var jobId = Guid.NewGuid();
+
+        _jobRepository
+            .Setup(r => r.GetByJobPublicIdAndWorkerPublicIdAsync(jobId, workerId))
+            .ReturnsAsync((Job?)null);
+
+        _jobCrudRepository
+            .Setup(r => r.Update(It.Is<Job>(j => j.JobPublicId == jobId)));
+
+        // Act + Assert
+        var act = () => CreateService().ChangeJobStatusAsync(jobId, JobStatusEnum.Completed, new WorkerIdRef { WorkerId = workerId });
+        
+        Assert.ThrowsAsync<NotFoundException>(async () => await act());
+        _jobCrudRepository.Verify(r => r.Update(It.Is<Job>(j => j.JobPublicId == jobId)), Times.Never);
+    }
+
+    [Test]
+    public void ChangeJobStatusAsync_WhenEmptyJobId_ShouldThrowException()
+    {
+        // Act + Assert
+        var act = () => CreateService().ChangeJobStatusAsync(Guid.Empty, JobStatusEnum.Completed, new WorkerIdRef { WorkerId = Guid.NewGuid() });
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+        _jobRepository.Verify(r => r.GetByJobPublicIdAndWorkerPublicIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Test]
+    public void ChangeJobStatusAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        var act = () => CreateService().ChangeJobStatusAsync(Guid.NewGuid(), JobStatusEnum.Completed, new WorkerIdRef { WorkerId = Guid.Empty });
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+        _jobRepository.Verify(r => r.GetByJobPublicIdAndWorkerPublicIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
     }
 
     [Test]
@@ -235,5 +288,79 @@ public class JobServiceTests
         Assert.That(result, Is.Null);
 
         _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.Id), Times.Once);
+    }
+
+    [Test]
+    public void GetNextWorkerJobsAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        var act = () => CreateService().GetNextWorkerJobsAsync(Guid.Empty);
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+        _workerRepository.Verify(r => r.GetByPublicIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Test]
+    public void GetNextWorkerJobsAsync_WhenWorkerNotFound_ShouldThrowException()
+    {
+        // Arrange
+        var workerId = Guid.NewGuid();
+        _workerRepository
+            .Setup(r => r.GetByPublicIdAsync(workerId))
+            .ReturnsAsync((Worker?)null);
+
+        // Act + Assert
+        var act = () => CreateService().GetNextWorkerJobsAsync(workerId);
+        Assert.ThrowsAsync<NotFoundException>(async () => await act());
+        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(It.IsAny<long>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetAllJobsAsync_ShouldReturnJobs()
+    {
+        // Arrange
+        var jobs = new[] { ServiceTestData.QueuedJob(), ServiceTestData.QueuedJob() };
+        _jobRepository.Setup(r => r.GetAllJobsAsync()).ReturnsAsync(jobs);
+
+        // Act
+        var result = await CreateService().GetAllJobsAsync();
+
+        // Assert
+        Assert.That(result, Has.Exactly(2).Items);
+    }
+
+    [Test]
+    public async Task GetJobByPublicIdAsync_WhenJobExists_ShouldReturnJob()
+    {
+        // Arrange
+        var job = ServiceTestData.QueuedJob();
+        _jobRepository.Setup(r => r.GetByJobPublicIdAsync(job.JobPublicId)).ReturnsAsync(job);
+
+        // Act
+        var result = await CreateService().GetJobByPublicIdAsync(job.JobPublicId);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.JobId, Is.EqualTo(job.JobPublicId));
+    }
+
+    [Test]
+    public async Task GetJobByPublicIdAsync_WhenJobDoesNotExist_ShouldReturnNull()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        _jobRepository.Setup(r => r.GetByJobPublicIdAsync(jobId)).ReturnsAsync((Job?)null);
+
+        // Act
+        var result = await CreateService().GetJobByPublicIdAsync(jobId);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetJobByPublicIdAsync_WhenEmptyJobId_ShouldThrowException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().GetJobByPublicIdAsync(Guid.Empty));
     }
 }

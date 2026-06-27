@@ -49,7 +49,7 @@ public class WorkerServiceTests
     [Test]
     public async Task RegisterAsync_WhenValidWorker_ShouldCreateNewWorker()
     {
-        // Assign
+        // Arrange
         var emailJobType = ServiceTestData.EmailJobType();
         var videoJobType = ServiceTestData.VideoJobType();
         Worker? persisted = null;
@@ -88,7 +88,7 @@ public class WorkerServiceTests
     [Test]
     public void RegisterAsync_WhenInvalidCapabilities_ShouldRejectThrowException()
     {
-        //Assign
+        // Arrange
         var request = new RegisterWorker
         {
             WorkerName = "worker-a",
@@ -111,9 +111,22 @@ public class WorkerServiceTests
     }
 
     [Test]
+    public void RegisterAsync_WhenValidationFails_ShouldThrowException()
+    {
+        // Arrange
+        _registerWorkerValidator
+            .Setup(v => v.Validate(It.IsAny<RegisterWorker>()))
+            .Returns(["Invalid registration"]);
+
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().RegisterAsync(new RegisterWorker()));
+        _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Never);
+    }
+
+    [Test]
     public async Task RemoveAsync_WhenValidWorker_ShouldDeactivateWorkerAndUnassignJobs()
     {
-        // Assign
+        // Arrange
         var worker = ServiceTestData.ActiveWorker(capabilities: [ServiceTestData.EmailJobType()]);
 
         _workerRepository
@@ -140,7 +153,7 @@ public class WorkerServiceTests
     [Test]
     public void RemoveAsync_WhenUnknownWorker_ShouldThrowException()
     {
-        // Assign
+        // Arrange
         var workerId = Guid.NewGuid();
 
         _workerRepository.Setup(r => r.GetByPublicIdAsync(workerId))
@@ -160,25 +173,18 @@ public class WorkerServiceTests
         _jobRepository.Verify(r => r.UnassignJobForWorkerIdAsync(It.IsAny<long>()), Times.Never);
     }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    [Test]
+    public void RemoveAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().RemoveAsync(Guid.Empty));
+        _workerRepository.Verify(r => r.GetByPublicIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
 
     [Test]
     public async Task HeartBeatAsync_WhenValidWorker_ShouldExtendWorkerExpiration()
     {
-        // Assign
+        // Arrange
         var worker = ServiceTestData.ActiveWorker();
 
         _workerRepository.Setup(r => r.UpdateWorkerExpiryTimestampAsync(worker.WorkerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds))
@@ -206,8 +212,67 @@ public class WorkerServiceTests
         // Act
         var result = await CreateService().HeartBeatAsync(workerPublicId);
 
+        // Assert
         Assert.That(result.ActionStatus, Is.EqualTo(ActionStatusEnum.Failed));
 
         _workerRepository.Verify(r => r.UpdateWorkerExpiryTimestampAsync(workerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds), Times.Once);
+    }
+
+    [Test]
+    public void HeartBeatAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().HeartBeatAsync(Guid.Empty));
+        _workerRepository.Verify(r => r.UpdateWorkerExpiryTimestampAsync(It.IsAny<Guid>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetAllWorkersAsync_ShouldReturnWorkers()
+    {
+        // Arrange
+        var workers = new[] { ServiceTestData.ActiveWorker(), ServiceTestData.ActiveWorker() };
+        _workerRepository.Setup(r => r.GetAllWorkersAsync()).ReturnsAsync(workers);
+
+        // Act
+        var result = await CreateService().GetAllWorkersAsync();
+
+        // Assert
+        Assert.That(result, Has.Exactly(2).Items);
+    }
+
+    [Test]
+    public async Task GetWorkerByPublicIdAsync_WhenWorkerExists_ShouldReturnWorker()
+    {
+        // Arrange
+        var worker = ServiceTestData.ActiveWorker();
+        _workerRepository.Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId)).ReturnsAsync(worker);
+
+        // Act
+        var result = await CreateService().GetWorkerByPublicIdAsync(worker.WorkerPublicId);
+
+        // Assert
+        Assert.That(result, Is.Not.Null);
+        Assert.That(result!.WorkerId, Is.EqualTo(worker.WorkerPublicId));
+    }
+
+    [Test]
+    public async Task GetWorkerByPublicIdAsync_WhenWorkerDoesNotExist_ShouldReturnNull()
+    {
+        // Arrange
+        var workerId = Guid.NewGuid();
+        _workerRepository.Setup(r => r.GetByPublicIdAsync(workerId)).ReturnsAsync((Worker?)null);
+
+        // Act
+        var result = await CreateService().GetWorkerByPublicIdAsync(workerId);
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetWorkerByPublicIdAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().GetWorkerByPublicIdAsync(Guid.Empty));
     }
 }

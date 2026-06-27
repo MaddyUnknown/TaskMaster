@@ -1,5 +1,6 @@
 using Moq;
 using TaskMaster.API.Entities;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
@@ -56,6 +57,19 @@ public class JobTypeServiceTests
     }
 
     [Test]
+    public void CreateJobTypeAsync_WhenValidationFails_ShouldThrowException()
+    {
+        // Assert
+        _createJobTypeValidator
+            .Setup(v => v.Validate(It.IsAny<CreateJobType>()))
+            .Returns(["Invalid job type"]);
+
+        // Act + Arrange
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().CreateJobTypeAsync(new CreateJobType()));
+        _repository.Verify(r => r.Add(It.IsAny<JobType>()), Times.Never);
+    }
+
+    [Test]
     public async Task GetJobTypeAsync_WhenJobTypeExists_ShouldReturnDetails()
     {
         // Arrange
@@ -73,5 +87,45 @@ public class JobTypeServiceTests
         Assert.That(result!.Name, Is.EqualTo(jobType.Name));
         Assert.That(result.Version, Is.EqualTo(jobType.Version));
         Assert.That(result.Schema, Is.EqualTo(jobType.Schema));
+    }
+
+    [Test]
+    public async Task GetJobTypeAsync_WhenNotExists_ShouldReturnNull()
+    {
+        // Arrange
+        _jobTypeRepository.Setup(r => r.GetByJobTypeNameAndVersionAsync("missing", 1)).ReturnsAsync((JobType?)null);
+
+        // Act
+        var result = await CreateService().GetJobTypeAsync(new JobTypeRef { Name = "missing", Version = 1 });
+
+        // Assert
+        Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public void GetJobTypeAsync_WhenValidationFails_ShouldThrowException()
+    {
+        // Arrange
+        _jobTypeRefValidator
+            .Setup(v => v.Validate(It.IsAny<JobTypeRef>()))
+            .Returns(["Invalid job type ref"]);
+
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().GetJobTypeAsync(new JobTypeRef { Name = "", Version = 0 }));
+        _jobTypeRepository.Verify(r => r.GetByJobTypeNameAndVersionAsync(It.IsAny<string>(), It.IsAny<long>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetAllJobTypesAsync_ShouldReturnJobTypes()
+    {
+        // Arrange
+        var jobTypes = new[] { new JobType { Name = "email", Version = 1, Schema = "{}" }, new JobType { Name = "video", Version = 2, Schema = "{}" } };
+        _jobTypeRepository.Setup(r => r.GetAllJobTypesAsync()).ReturnsAsync(jobTypes);
+
+        // Act
+        var result = await CreateService().GetAllJobTypesAsync();
+
+        // Assert
+        Assert.That(result, Has.Exactly(2).Items);
     }
 }
