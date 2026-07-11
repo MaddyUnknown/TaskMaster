@@ -26,6 +26,7 @@ namespace TaskMaster.API.Mappers
                 JobId = jobEntity.JobPublicId,
                 JobType = (jobType == null) ? JobTypeRef.Empty : new JobTypeRef { Name = jobType.Name, Version = jobType.Version },
                 Payload = jobEntity.Payload,
+                AssignedWorker = jobEntity.AssignedWorker?.ToWorkerRef(),
                 Status = jobEntity.Status,
                 CreatedDateTime = jobEntity.CreatedDateTime,
                 ModifyDateTime = jobEntity.ModifyDateTime,

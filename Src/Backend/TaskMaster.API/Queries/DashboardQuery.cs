@@ -51,6 +51,55 @@ namespace TaskMaster.API.Queries
             }
         }
 
+        public async Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        {
+            var raw = await _context.Database.SqlQuery<HourlyCount>(
+                $@"DECLARE @CurrentBucketStart DATETIME2 = DATEADD(
+                    HOUR,
+                    (DATEDIFF(HOUR, 0, SYSDATETIME()) / 2) * 2,
+                    0
+                );
+
+                WITH Buckets AS
+                (
+                    SELECT DATEADD(HOUR, -22, @CurrentBucketStart) AS BucketStart
+                    UNION ALL
+                    SELECT DATEADD(HOUR, 2, BucketStart)
+                    FROM Buckets
+                    WHERE BucketStart < @CurrentBucketStart
+                ),
+                JobCounts AS
+                (
+                    SELECT 
+		                DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0) AS BucketStart,
+                        COUNT(*) AS JobCount
+                    FROM Jobs
+                    WHERE 
+		                CreatedDateTime >= DATEADD(HOUR, -22, @CurrentBucketStart)
+		                AND CreatedDateTime < SYSDATETIME()
+                    GROUP BY
+                        DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0)
+                )
+                SELECT
+                    b.BucketStart,
+	                DATEADD(HOUR, 2, b.BucketStart) BucketEnd,
+	                CONVERT(char(5), b.BucketStart, 108) BucketHour,
+                    ISNULL(j.JobCount, 0) AS JobCount
+                FROM Buckets b
+                LEFT JOIN JobCounts j
+                    ON b.BucketStart = j.BucketStart
+                ORDER BY b.BucketStart;"
+            ).ToListAsync();
+
+            return raw.Select(r => new JobStatsItem
+            {
+                BucketStart = r.BucketStart,
+                BucketEnd = r.BucketEnd,
+                BucketHour = r.BucketHour,
+                JobCount = r.JobCount
+            });
+        }
+
         public async Task<List<Job>> GetRecentJobsAsync(int count)
         {
             return await _context.Jobs
@@ -58,6 +107,14 @@ namespace TaskMaster.API.Queries
                 .OrderByDescending(j => j.ModifyDateTime)
                 .Take(count)
                 .ToListAsync();
+        }
+
+        private sealed class HourlyCount
+        {
+            public DateTime BucketStart { get; set; }
+            public DateTime BucketEnd { get; set; }
+            public string BucketHour { get; set; } = string.Empty;
+            public int JobCount { get; set; }
         }
 
         private class DashboardCounts

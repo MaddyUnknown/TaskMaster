@@ -24,6 +24,7 @@ namespace TaskMaster.API.Entities
 
         //Navigation property
         public JobType JobType { get; set; } = null!;
+        public Worker? AssignedWorker { get; set; } = null;
 
     }
 }

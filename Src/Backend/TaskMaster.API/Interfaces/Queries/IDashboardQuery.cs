@@ -1,4 +1,5 @@
 using TaskMaster.API.Entities;
+using TaskMaster.API.Models.Dashboard;
 
 namespace TaskMaster.API.Interfaces.Queries
 {
@@ -13,9 +14,18 @@ namespace TaskMaster.API.Interfaces.Queries
         public bool DatabaseHealthy { get; set; }
     }
 
+    public class JobStatsItem
+    {
+        public DateTime BucketStart { get; set; }
+        public DateTime BucketEnd { get; set; }
+        public string BucketHour { get; set; } = string.Empty;
+        public int JobCount { get; set; }
+    }
+
     public interface IDashboardQuery
     {
         Task<DashboardData> GetDashboardDataAsync();
         Task<List<Job>> GetRecentJobsAsync(int count);
+        Task<IEnumerable<JobStatsItem>> GetJobStatsAsync();
     }
 }

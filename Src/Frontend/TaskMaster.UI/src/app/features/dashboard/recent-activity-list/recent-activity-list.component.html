@@ -1,0 +1,23 @@
+<app-card title="Recent Activity" class="dashboard-activity">
+  <div class="activity-list">
+    @if (!loading) {
+      @for (activity of activities; track activity.timestamp) {
+        <div class="activity-item">
+          <div
+            class="activity-dot activity-{{ activity.status.toLowerCase() }}"
+          ></div>
+          <div class="activity-content">
+            <p class="activity-message">{{ activity.message }}</p>
+            <span class="activity-time">{{
+              activity.timestamp | date: "short"
+            }}</span>
+          </div>
+        </div>
+      } @empty {
+        <div class="activity-empty">No recent activity</div>
+      }
+    } @else {
+      <div class="activity-loading">Loading activity...</div>
+    }
+  </div>
+</app-card>

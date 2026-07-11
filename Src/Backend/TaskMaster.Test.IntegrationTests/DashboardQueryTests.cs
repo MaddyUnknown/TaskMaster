@@ -22,8 +22,7 @@ public class DashboardQueryTests : IntegrationTestBase
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = "inactive",
                 Status = WorkerStatusEnum.InActive,
-                WorkerCapabilities = [],
-                AssignedJobs = []
+                WorkerCapabilities = []
             };
             db.Add(jobType);
             db.AddRange(

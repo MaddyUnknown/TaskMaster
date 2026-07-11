@@ -42,8 +42,7 @@ internal static class ServiceTestData
         WorkerPublicId = publicId ?? Guid.NewGuid(),
         WorkerName = "worker-a",
         Status = WorkerStatusEnum.Active,
-        WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToArray(),
-        AssignedJobs = []
+        WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToArray()
     };
 
     public static Job QueuedJob(JobType? jobType = null, long id = 501) => new()

@@ -1,0 +1,87 @@
+<app-content
+  title="Jobs"
+  description="Monitor and manage all jobs in the system"
+  [breadcrumbs]="[{ label: 'Jobs' }]"
+>
+  <button
+    app-button
+    content-actions
+    variant="primary"
+    [disabled]="loading"
+    (click)="openCreateDialog()"
+  >
+    <svg lucidePlus size="1.6rem"></svg>
+    Create
+  </button>
+
+  <div class="filters">
+    <div class="filter-tabs">
+      @for (tab of filterTabs; track tab.value) {
+        <button
+          class="filter-tab"
+          [class.filter-tab-active]="activeFilter === tab.value"
+          (click)="setFilter(tab.value)"
+        >
+          {{ tab.label }}
+          <span class="filter-count">{{ tab.count }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading) {
+    <app-loading type="pulse" text="Loading jobs..." />
+  } @else if (filteredJobs.length === 0) {
+    <app-empty-state
+      icon="📄"
+      title="No jobs found"
+      description="No jobs match the current filter."
+    />
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table" role="table">
+        <thead>
+          <tr>
+            <th>Id</th>
+            <th>Type</th>
+            <th>Status</th>
+            <th>Worker</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (job of filteredJobs; track job.id) {
+            <tr class="data-row" [routerLink]="['/jobs', job.id]">
+              <td class="cell-mono">{{ job.id }}</td>
+              <td>
+                <span class="type-badge">{{
+                  job.jobTypeName + " v" + job.jobTypeVersion
+                }}</span>
+              </td>
+              <td>
+                <app-badge [variant]="statusVariant(job.status)" [dot]="true">{{
+                  statusLabel(job.status)
+                }}</app-badge>
+              </td>
+              <td>
+                <span class="cell-muted">{{ job.workerName || "—" }}</span>
+              </td>
+              <td>
+                <span class="cell-muted">{{
+                  job.createdDateTime | date: "MMM dd, hh:mm a"
+                }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-content>
+
+<app-create-job-dialog
+  [open]="showCreateDialog"
+  [submitting]="submitting"
+  (close)="closeCreateDialog()"
+  (submit)="createJob($event)"
+/>

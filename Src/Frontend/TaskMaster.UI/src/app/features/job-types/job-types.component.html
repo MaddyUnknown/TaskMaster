@@ -1,0 +1,46 @@
+<app-content
+  title="Job Types"
+  description="Manage job type definitions and schemas"
+  [breadcrumbs]="[{ label: 'Job Types' }]"
+>
+  <button
+    app-button
+    content-actions
+    variant="primary"
+    [disabled]="loading"
+    (click)="openCreateDialog()"
+  >
+    <svg lucidePlus size="1.6rem"></svg>
+    Create
+  </button>
+
+  @if (loading) {
+    <app-loading type="pulse" text="Loading job types..." />
+  } @else if (groups.length === 0) {
+    <app-empty-state
+      icon="📄"
+      title="No job types"
+      description="No job types have been defined yet."
+    />
+  } @else {
+    <div class="job-types-grid">
+      @for (group of groups; track group.name) {
+        <app-job-type-card
+          [group]="group"
+          (selectVersion)="selectVersion($event)"
+          (addVersion)="openAddVersion($event)"
+        />
+      }
+    </div>
+  }
+</app-content>
+
+<app-job-type-form-dialog
+  [open]="showCreateDialog"
+  [mode]="dialogMode"
+  [version]="dialogVersion"
+  [initialData]="dialogInitialData"
+  [submitting]="submitting"
+  (close)="closeDialog()"
+  (submit)="submit($event)"
+/>

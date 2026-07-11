@@ -1,6 +1,6 @@
 namespace TaskMaster.API.Models.Enums
 {
-    public enum HealthStatus
+    public enum HealthStatusEnum
     {
         Healthy,
         Unhealthy,

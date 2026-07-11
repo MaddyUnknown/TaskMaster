@@ -1,0 +1,39 @@
+<app-content
+  title="Dashboard"
+  description="Overview of your TaskMaster system"
+  [breadcrumbs]="[{ label: 'Dashboard' }]"
+>
+  <div class="stats-container">
+    @for (stat of stats; track stat.label) {
+      <div
+        class="stat-card"
+        [routerLink]="stat.route"
+        [style.--accent]="stat.iconColor"
+      >
+        <div class="stat-info">
+          <p class="stat-label">{{ stat.label }}</p>
+          <p class="stat-value">{{ stat.value }}</p>
+        </div>
+        <div
+          class="stat-icon"
+          [style.background]="stat.iconBg"
+          [style.color]="stat.iconColor"
+        >
+          <ng-container
+            *ngComponentOutlet="stat.icon; inputs: { size: '2rem' }"
+          />
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="dashboard-middle">
+    <app-recent-activity-list
+      [activities]="activities"
+      [loading]="loadingActivities"
+    />
+    <app-system-health-card [health]="health" [loading]="loadingHealth" />
+  </div>
+
+  <app-jobs-per-hour-chart [data]="chartData" [loading]="loadingChart" />
+</app-content>

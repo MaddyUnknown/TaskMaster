@@ -16,12 +16,12 @@ namespace TaskMaster.API.Repositories
 
         public async Task<Job?> GetByJobPublicIdAsync(Guid jobPublicId)
         {
-            return await _context.Jobs.Include(j => j.JobType).Where(j => j.JobPublicId == jobPublicId).FirstOrDefaultAsync();
+            return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).Where(j => j.JobPublicId == jobPublicId).FirstOrDefaultAsync();
         }
 
         public async Task<IEnumerable<Job>> GetAllJobsAsync()
         {
-            return await _context.Jobs.Include(j => j.JobType).OrderByDescending(j => j.Id).ToListAsync();
+            return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).OrderByDescending(j => j.Id).ToListAsync();
         }
 
         public async Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId)
@@ -29,7 +29,7 @@ namespace TaskMaster.API.Repositories
             var workerId = await _context.Workers.Where(w => w.WorkerPublicId == workerPublicId).Select(w => w.Id).FirstOrDefaultAsync();
             if (workerId == 0) return null;
 
-            return await _context.Jobs.Include(j => j.JobType).Where(j => j.JobPublicId == jobPublicId && j.AssignedWorkerId == workerId).FirstOrDefaultAsync();
+            return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).Where(j => j.JobPublicId == jobPublicId && j.AssignedWorkerId == workerId).FirstOrDefaultAsync();
         }
 
         public async Task<int> UnassignJobForWorkerIdAsync(long workerId)
@@ -68,6 +68,7 @@ namespace TaskMaster.API.Repositories
             if(job != null)
             {
                 await _context.Entry(job).Reference(j => j.JobType).LoadAsync();
+                await _context.Entry(job).Reference(j => j.AssignedWorker).LoadAsync();
             }
 
             return job;

@@ -1,0 +1,20 @@
+<nav class="breadcrumb" aria-label="Breadcrumb">
+  <ol class="breadcrumb-list">
+    @for (item of items; track $index) {
+      <li class="breadcrumb-item">
+        @if (item.route && !$last) {
+          <a class="breadcrumb-link" [routerLink]="item.route">{{
+            item.label
+          }}</a>
+        } @else {
+          <span class="breadcrumb-text" [class.breadcrumb-current]="$last">{{
+            item.label
+          }}</span>
+        }
+        @if (!$last) {
+          <svg lucideChevronRight class="breadcrumb-separator" size="1.4rem"></svg>
+        }
+      </li>
+    }
+  </ol>
+</nav>

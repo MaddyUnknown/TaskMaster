@@ -1,0 +1,22 @@
+@switch (type) {
+  @case ('spinner') {
+    <div class="loading-spinner" [style.width]="size" [style.height]="size"></div>
+  }
+  @case ('dots') {
+    <div class="loading-dots">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  }
+  @case ('pulse') {
+    <div class="loading-pulse">
+      @for (bar of pulseBars; track bar) {
+        <div class="pulse-bar" [style.width]="bar"></div>
+      }
+    </div>
+  }
+}
+@if (text) {
+  <p class="loading-text">{{ text }}</p>
+}

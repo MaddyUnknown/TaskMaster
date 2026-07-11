@@ -1,0 +1,35 @@
+<header class="header">
+  <div class="header-left">
+    <ng-content select="[header-content]"></ng-content>
+  </div>
+  <div class="header-right">
+    <button
+      class="header-btn"
+      (click)="showSystemInfo = true"
+      aria-label="System Information"
+    >
+      <svg lucideInfo size="1.8rem"></svg>
+    </button>
+  </div>
+</header>
+
+<app-dialog
+  [open]="showSystemInfo"
+  title="System Information"
+  (close)="showSystemInfo = false"
+>
+  <div class="sysinfo-rows">
+    <div class="sysinfo-row">
+      <span class="sysinfo-label">Version</span>
+      <span class="sysinfo-value">1.0.0</span>
+    </div>
+    <div class="sysinfo-row">
+      <span class="sysinfo-label">Environment</span>
+      <span class="sysinfo-value">Development</span>
+    </div>
+    <div class="sysinfo-row">
+      <span class="sysinfo-label">API Endpoint</span>
+      <span class="sysinfo-value code">http://localhost:5000</span>
+    </div>
+  </div>
+</app-dialog>

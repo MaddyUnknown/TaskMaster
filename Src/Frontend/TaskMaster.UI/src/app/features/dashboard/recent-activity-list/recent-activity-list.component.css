@@ -1,0 +1,68 @@
+.activity-list {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--app-recent-activity-list-max-height);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.activity-item {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-2);
+  border-bottom: 0.1rem solid var(--color-border-light);
+  transition: background var(--transition-fast);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-item:hover {
+  background: var(--color-surface-secondary);
+}
+
+.activity-dot {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: var(--radius-full);
+  margin-top: var(--space-2);
+}
+
+.activity-success {
+  background: var(--color-success);
+}
+
+.activity-error {
+  background: var(--color-error);
+}
+
+.activity-info {
+  background: var(--color-info);
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-message {
+  font-size: var(--text-sm);
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.activity-time {
+  font-size: var(--text-xs);
+  color: var(--color-text-tertiary);
+  margin-top: var(--space-1);
+  display: block;
+}
+
+.activity-empty,
+.activity-loading {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--text-sm);
+}

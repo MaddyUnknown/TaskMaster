@@ -1,0 +1,79 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--header-height);
+  padding: 0 var(--space-7);
+  background: var(--color-surface);
+  border-bottom: 0.1rem solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex: 1;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.header-btn {
+  position: relative;
+  width: 3.6rem;
+  height: 3.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.header-btn:hover {
+  background: var(--color-surface-secondary);
+  color: var(--color-text-primary);
+}
+
+/* System info dialog */
+.sysinfo-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.sysinfo-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  border-bottom: 0.1rem solid var(--color-border-light);
+}
+
+.sysinfo-row:last-child {
+  border-bottom: none;
+}
+
+.sysinfo-label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.sysinfo-value {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.sysinfo-value.code {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  background: var(--color-surface-secondary);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+}

@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Options;
+﻿using System.Linq;
+using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -33,9 +34,8 @@ namespace TaskMaster.Library.Common.HttpClients
             EnsureBaseAddress();
             var endpoint = ApiEndpoint.GetJobType(request.JobTypeName, request.JobTypeVersion);
             var response = await SendAsync(endpoint, () => _httpClient.GetAsync(endpoint));
-            if (response.StatusCode == HttpStatusCode.NotFound) return null;
-            var wrapper = await EnsureSuccessAsync<JobTypeDetails?>(response);
-            return wrapper.Data;
+            var wrapper = await EnsureSuccessAsync<JobTypeDetails[]>(response);
+            return wrapper.Data?.FirstOrDefault();
         }
 
         public async Task<JobDetails> CreateJob(CreateJobRequest request)

@@ -1,9 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using TaskMaster.API.Entities;
-using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
-using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 
 namespace TaskMaster.API.Controllers
@@ -30,24 +27,20 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<object>>> GetAll([FromQuery] string? name, [FromQuery] long? version)
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobTypeDetails>>>> GetAll([FromQuery] string? name, [FromQuery] long? version)
         {
             if (name != null && version.HasValue)
             {
                 var jobTypeRef = new JobTypeRef { Name = name, Version = version.Value };
                 var jobType = await _jobTypeService.GetJobTypeAsync(jobTypeRef);
-                if (jobType == null)
-                {
-                    _logger.LogWarning("Job type {JobTypeName} v{JobTypeVersion} not found", name, version);
-                    return NotFound(ApiResponse<object>.Fail($"Job type '{name} v{version}' not found"));
-                }
-                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} retrieved", name, version);
-                return Ok(ApiResponse<object>.Success(jobType));
+                var result = jobType != null ? [jobType] : Enumerable.Empty<JobTypeDetails>();
+                _logger.LogInformation("Job type {JobTypeName} v{JobTypeVersion} lookup returned {Count} result(s)", name, version, result.Count());
+                return Ok(ApiResponse<IEnumerable<JobTypeDetails>>.Success(result));
             }
 
             var allJobTypes = await _jobTypeService.GetAllJobTypesAsync();
             _logger.LogInformation("Retrieved {JobTypeCount} job types", allJobTypes.Count());
-            return Ok(ApiResponse<object>.Success(allJobTypes));
+            return Ok(ApiResponse<IEnumerable<JobTypeDetails>>.Success(allJobTypes));
         }
     }
 }

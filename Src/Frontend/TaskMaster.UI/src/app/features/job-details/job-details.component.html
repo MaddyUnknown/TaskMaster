@@ -1,0 +1,123 @@
+@if (job; as j) {
+  <app-content
+    [title]="j.id"
+    [description]="j.jobTypeName"
+    [breadcrumbs]="[{ label: 'Jobs', route: nav.routes.jobs }, { label: j.id }]"
+  >
+    <div class="details-container">
+      <div class="details-main">
+        <app-card title="Job Information">
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-label">Job Id</span>
+              <span class="info-value">{{ j.id }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Type</span>
+              <span class="type-badge">{{
+                j.jobTypeName + " v" + j.jobTypeVersion
+              }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status</span>
+              <app-badge [variant]="statusVariant(j.status)" [dot]="true">{{
+                labelText(j.status)
+              }}</app-badge>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Created</span>
+              <span class="info-value">{{
+                j.createdDateTime | date: "MMM dd, y, hh:mm:ss a"
+              }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Last Modified</span>
+              <span class="info-value">{{
+                j.modifyDateTime | date: "MMM dd, y, hh:mm:ss a"
+              }}</span>
+            </div>
+          </div>
+        </app-card>
+        <app-card title="Payload">
+          <pre class="code-block">{{ j.payload }}</pre>
+        </app-card>
+      </div>
+      <div class="details-side">
+        <app-card title="Assigned Worker">
+          @if (j.workerName) {
+            <div class="worker-info">
+              <div class="worker-avatar">
+                {{ j.workerName.charAt(0).toUpperCase() }}
+              </div>
+              <div>
+                <p class="worker-name">{{ j.workerName }}</p>
+                <a class="worker-id" [routerLink]="['/workers', j.workerId]">{{
+                  j.workerId
+                }}</a>
+              </div>
+            </div>
+          } @else {
+            <p class="no-worker">No worker assigned</p>
+          }
+        </app-card>
+        <app-card title="Timeline">
+          <div class="timeline">
+            <div class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-content">
+                <p class="timeline-title">Created</p>
+                <p class="timeline-time">
+                  {{ j.createdDateTime | date: "MMM dd, y, hh:mm:ss a" }}
+                </p>
+              </div>
+            </div>
+            @if (
+              j.status === JobStatus.InProgress ||
+              j.status === JobStatus.Completed
+            ) {
+              <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                  <p class="timeline-title">Processing</p>
+                  <p class="timeline-time">In progress</p>
+                </div>
+              </div>
+            }
+            @if (j.completedDateTime) {
+              <div class="timeline-item">
+                <div class="timeline-dot timeline-dot-success"></div>
+                <div class="timeline-content">
+                  <p class="timeline-title">Completed</p>
+                  <p class="timeline-time">
+                    {{ j.completedDateTime | date: "MMM dd, y, hh:mm:ss a" }}
+                  </p>
+                </div>
+              </div>
+            }
+            @if (j.failDateTime) {
+              <div class="timeline-item">
+                <div class="timeline-dot timeline-dot-error"></div>
+                <div class="timeline-content">
+                  <p class="timeline-title">Failed</p>
+                  <p class="timeline-time">
+                    {{ j.failDateTime | date: "MMM dd, y, hh:mm:ss a" }}
+                  </p>
+                </div>
+              </div>
+            }
+          </div>
+        </app-card>
+      </div>
+    </div>
+  </app-content>
+} @else if (notFound) {
+  <app-content
+    title="Job Not Found"
+    [breadcrumbs]="[{ label: 'Jobs', route: nav.routes.jobs }, { label: 'Not Found' }]"
+  >
+    <p>The requested job could not be found.</p>
+    <a [routerLink]="nav.routes.jobs" class="back-link">Back to Jobs</a>
+  </app-content>
+} @else {
+  <app-content><app-loading /></app-content>
+}

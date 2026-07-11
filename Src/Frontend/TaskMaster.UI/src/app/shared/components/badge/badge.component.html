@@ -1,0 +1,6 @@
+<span class="badge badge-{{ variant }}" [class.badge-dot]="dot" [class.badge-inline]="!pill">
+  @if (dot) {
+    <span class="dot"></span>
+  }
+  <ng-content></ng-content>
+</span>

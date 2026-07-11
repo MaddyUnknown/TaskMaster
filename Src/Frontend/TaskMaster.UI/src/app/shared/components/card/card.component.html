@@ -1,0 +1,11 @@
+<div class="card" [class.card-hoverable]="hoverable" [class.card-padded]="!noPadding">
+  @if (title) {
+    <div class="card-header">
+      <h3 class="card-title">{{ title }}</h3>
+      @if (subtitle) {
+        <p class="card-subtitle">{{ subtitle }}</p>
+      }
+    </div>
+  }
+  <ng-content></ng-content>
+</div>

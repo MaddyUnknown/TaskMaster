@@ -16,7 +16,6 @@ namespace TaskMaster.API.Mappers
             {
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = request.WorkerName,
-                WorkerDisplayName = string.IsNullOrEmpty(request.WorkerDisplayName) ? request.WorkerName : request.WorkerDisplayName,
                 WorkerCapabilities = jobTypes.Select(t => new WorkerCapability { JobType = t }).ToList(),
                 Status = WorkerStatusEnum.Active,
             };
@@ -28,9 +27,7 @@ namespace TaskMaster.API.Mappers
             {
                 WorkerId = worker.WorkerPublicId,
                 WorkerName = worker.WorkerName,
-                WorkerDisplayName = worker.WorkerDisplayName,
                 Status = worker.Status,
-                WorkerExpiresAtTimestamp = worker.WorkerExpiresAtTimestamp,
                 LastHeartBeatTimestamp = worker.LastHeartBeatTimestamp,
                 CreatedDateTime = worker.CreatedDateTime,
                 JobTypeCapabilities = worker.WorkerCapabilities
@@ -42,7 +39,16 @@ namespace TaskMaster.API.Mappers
                     }).ToArray()
             };
         }
-        
+
+        public static WorkerRef ToWorkerRef(this Worker worker)
+        {
+            return new WorkerRef
+            {
+                WorkerId = worker.WorkerPublicId,
+                WorkerName = worker.WorkerName,
+            };
+        }
+
         public static RegisterWorkerResponse ToRegisterWorkerResponse(this Worker worker, int heartBeatIntervalSeconds)
         {
             return new RegisterWorkerResponse

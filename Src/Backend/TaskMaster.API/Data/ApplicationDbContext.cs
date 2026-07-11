@@ -35,6 +35,11 @@ namespace TaskMaster.API.Data
                 .HasForeignKey(j => j.JobTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Job>()
+                .HasOne(j => j.AssignedWorker)
+                .WithMany()
+                .HasForeignKey(j => j.AssignedWorkerId);
+
             // JobType Setup
             modelBuilder.Entity<JobType>()
                 .HasIndex(t => new { t.Name, t.Version })
@@ -48,11 +53,6 @@ namespace TaskMaster.API.Data
             modelBuilder.Entity<Worker>()
                 .HasIndex(w => new { w.WorkerPublicId })
                 .IsUnique();
-
-            modelBuilder.Entity<Worker>()
-                .HasMany(w => w.AssignedJobs)
-                .WithOne()
-                .HasForeignKey(j => j.AssignedWorkerId);
 
             var workerExpiryIntervalSec = _workerConfigOption.Value.WorkerExpiryIntervalSeconds;
             modelBuilder.Entity<Worker>()

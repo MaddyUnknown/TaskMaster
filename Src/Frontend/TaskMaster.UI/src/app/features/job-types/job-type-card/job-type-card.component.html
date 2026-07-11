@@ -1,0 +1,46 @@
+<app-card class="job-type-card">
+  <div class="jt-header">
+    <div class="jt-icon">
+      <svg lucideFileText size="2rem"></svg>
+    </div>
+    <div class="jt-info">
+      <h3 class="jt-name">{{ group.name }}</h3>
+      <div class="jt-versions-row">
+        <div class="jt-versions">
+          @for (v of group.versions; track v.version) {
+            <button
+              class="jt-version-btn"
+              [class.jt-version-active]="
+                group.selectedVersion.version === v.version
+              "
+              (click)="onSelectVersion(v)"
+            >
+              v{{ v.version }}
+            </button>
+          }
+        </div>
+        <button
+          class="jt-add-version-btn"
+          (click)="onAddVersion()"
+          title="Add version"
+        >
+          <svg lucidePlus size="1.4rem"></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+  <p class="jt-description">{{ group.selectedVersion.description }}</p>
+  <div class="jt-meta">
+    <span class="jt-date"
+      >Updated
+      {{
+        group.selectedVersion.modifyDateTime ??
+          group.selectedVersion.createdDateTime | date: "MMM d, y"
+      }}</span
+    >
+  </div>
+  <details class="jt-schema">
+    <summary class="jt-schema-toggle">View Schema</summary>
+    <pre class="schema-block">{{ group.selectedVersion.schema }}</pre>
+  </details>
+</app-card>

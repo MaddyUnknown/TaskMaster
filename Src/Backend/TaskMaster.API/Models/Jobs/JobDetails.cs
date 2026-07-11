@@ -10,6 +10,7 @@ namespace TaskMaster.API.Models.Jobs
         public JobTypeRef JobType { get; set; } = JobTypeRef.Empty;
         public string? Payload { get; set; } = string.Empty;
         public JobStatusEnum Status { get; set; }
+        public WorkerRef? AssignedWorker { get; set; }
         public DateTime CreatedDateTime { get; set; }
         public DateTime? ModifyDateTime { get; set; }
         public DateTime? CompletedDateTime { get; set; }

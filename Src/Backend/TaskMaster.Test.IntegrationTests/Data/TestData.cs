@@ -17,8 +17,7 @@ internal static class TestData
         WorkerPublicId = Guid.NewGuid(),
         WorkerName = name,
         Status = WorkerStatusEnum.Active,
-        WorkerCapabilities = jobTypes == null ? [] : jobTypes.Select(jt => new WorkerCapability { JobType = jt }).ToArray(),
-        AssignedJobs = []
+        WorkerCapabilities = jobTypes == null ? [] : jobTypes.Select(jt => new WorkerCapability { JobType = jt }).ToArray()
     };
 
     public static Job Job(JobType jobType, string payload = "{\"id\":1}") => new()

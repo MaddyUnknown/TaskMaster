@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
@@ -37,7 +38,7 @@ namespace TaskMaster.API
             builder.Services.AddControllers()
                 .AddJsonOptions(options =>
                 {
-                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower));
                 });
 
             builder.Services.Configure<ApiBehaviorOptions>(options =>

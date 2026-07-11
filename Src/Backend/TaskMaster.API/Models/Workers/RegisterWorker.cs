@@ -5,7 +5,6 @@ namespace TaskMaster.API.Models.Workers
     public class RegisterWorker
     {
         public string WorkerName { get; set; } = string.Empty;
-        public string? WorkerDisplayName { get; set; } = string.Empty;
         public IEnumerable<JobTypeRef> JobTypeCapabilities { get; set; } = Enumerable.Empty<JobTypeRef>();
     }
 }

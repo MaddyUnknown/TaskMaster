@@ -122,9 +122,6 @@ namespace TaskMaster.API.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
-                    b.Property<string>("WorkerDisplayName")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("WorkerExpiresAtTimestamp")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -180,8 +177,8 @@ namespace TaskMaster.API.Migrations
 
             modelBuilder.Entity("TaskMaster.API.Entities.Job", b =>
                 {
-                    b.HasOne("TaskMaster.API.Entities.Worker", null)
-                        .WithMany("AssignedJobs")
+                    b.HasOne("TaskMaster.API.Entities.Worker", "AssignedWorker")
+                        .WithMany()
                         .HasForeignKey("AssignedWorkerId");
 
                     b.HasOne("TaskMaster.API.Entities.JobType", "JobType")
@@ -189,6 +186,8 @@ namespace TaskMaster.API.Migrations
                         .HasForeignKey("JobTypeId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("AssignedWorker");
 
                     b.Navigation("JobType");
                 });
@@ -212,8 +211,6 @@ namespace TaskMaster.API.Migrations
 
             modelBuilder.Entity("TaskMaster.API.Entities.Worker", b =>
                 {
-                    b.Navigation("AssignedJobs");
-
                     b.Navigation("WorkerCapabilities");
                 });
 #pragma warning restore 612, 618

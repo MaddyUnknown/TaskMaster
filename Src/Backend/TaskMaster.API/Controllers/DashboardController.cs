@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Dashboard;
@@ -30,6 +31,13 @@ namespace TaskMaster.API.Controllers
         {
             var metrics = await _dashboardService.GetSystemMetricsAsync();
             return Ok(ApiResponse<SystemMetrics>.Success(metrics));
+        }
+
+        [HttpGet("job-stats")]
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobStatsItem>>>> GetJobStats()
+        {
+            var stats = await _dashboardService.GetJobStatsAsync();
+            return Ok(ApiResponse<IEnumerable<JobStatsItem>>.Success(stats));
         }
 
         [HttpGet("health")]

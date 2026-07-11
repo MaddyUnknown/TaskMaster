@@ -43,57 +43,38 @@ namespace TaskMaster.API.Services
         public async Task<SystemMetrics> GetSystemMetricsAsync()
         {
             var data = await _dashboardQuery.GetDashboardDataAsync();
-
             var totalJobs = data.QueuedJobs + data.InProgressJobs + data.CompletedJobs + data.FailedJobs;
-            var successRate = totalJobs > 0 ? Math.Round((double)data.CompletedJobs / totalJobs * 100, 1) : 100;
 
             return new SystemMetrics
             {
-                SuccessRate = successRate,
-                // TODO: Compute from actual job duration data once processing timestamps are tracked
-                AvgProcessingTime = 1.8,
                 ActiveWorkers = data.ActiveWorkers,
-                QueueDepth = data.QueuedJobs
+                TotalJobs = totalJobs,
+                QueuedJobs = data.QueuedJobs
             };
+        }
+
+        public async Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        {
+            return await _dashboardQuery.GetJobStatsAsync();
         }
 
         public async Task<SystemHealth> GetSystemHealthAsync()
         {
             var data = await _dashboardQuery.GetDashboardDataAsync();
 
-            var uptime = Environment.TickCount64 > 0
-                ? $"{TimeSpan.FromMilliseconds(Environment.TickCount64).Days}d"
-                : "unknown";
-
             return new SystemHealth
             {
                 Api = new ComponentHealth
                 {
-                    Status = HealthStatus.Healthy,
-                    Uptime = uptime,
-                    // TODO: Replace with real API latency measurement
-                    Latency = new Random().Next(5, 30)
+                    Status = HealthStatusEnum.Healthy,
                 },
-                Database = new DatabaseHealth
+                Database = new ComponentHealth
                 {
-                    Status = data.DatabaseHealthy ? HealthStatus.Healthy : HealthStatus.Unhealthy,
-                    // TODO: Query real connection count from DB
-                    Connections = data.ActiveWorkers + 2,
-                    // TODO: Read from actual SQL Server pool config
-                    PoolSize = 100
+                    Status = data.DatabaseHealthy ? HealthStatusEnum.Healthy : HealthStatusEnum.Unhealthy,
                 },
-                Queue = new QueueHealth
+                Workers = new ComponentHealth
                 {
-                    Status = HealthStatus.Healthy,
-                    Depth = data.QueuedJobs,
-                    // TODO: Calculate from actual queue processing rate
-                    Throughput = new Random().Next(30, 80)
-                },
-                Workers = new WorkerHealth
-                {
-                    Status = data.ActiveWorkers > 0 ? HealthStatus.Healthy : HealthStatus.Degraded,
-                    Active = data.ActiveWorkers,
-                    Inactive = data.InactiveWorkers
+                    Status = data.InactiveWorkers > 0 ? HealthStatusEnum.Degraded : HealthStatusEnum.Healthy,
                 }
             };
         }

@@ -7,9 +7,7 @@ namespace TaskMaster.API.Models.Workers
     {
         public Guid WorkerId { get; set; }
         public string WorkerName { get; set; } = string.Empty;
-        public string? WorkerDisplayName { get; set; } = string.Empty;
         public WorkerStatusEnum Status { get; set; }
-        public DateTime WorkerExpiresAtTimestamp { get; set; }
         public DateTime LastHeartBeatTimestamp { get; set; }
         public DateTime CreatedDateTime { get; set; }
         public IEnumerable<JobTypeRef> JobTypeCapabilities { get; set; } = Enumerable.Empty<JobTypeRef>();

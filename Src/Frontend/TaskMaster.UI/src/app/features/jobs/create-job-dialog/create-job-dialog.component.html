@@ -1,0 +1,74 @@
+<app-dialog
+  [open]="open"
+  title="Create Job"
+  [showFooter]="true"
+  (close)="onClose()"
+>
+  <form class="form-layout" [formGroup]="createJobForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label class="form-label" for="jobTypeName">Job Type</label>
+      <select
+        id="jobTypeName"
+        class="form-select"
+        formControlName="jobTypeName"
+      >
+        <option value="" disabled>Select job type</option>
+        @for (name of uniqueNames; track name) {
+          <option [value]="name">{{ name }}</option>
+        }
+      </select>
+      @if (
+        createJobForm.get("jobTypeName")?.invalid &&
+        createJobForm.get("jobTypeName")?.touched
+      ) {
+        <span class="form-error">Job type is required</span>
+      }
+    </div>
+
+    @if (versions.length > 0) {
+      <div class="form-group">
+        <label class="form-label" for="version">Version</label>
+        <select id="version" class="form-select" formControlName="version">
+          @for (v of versions; track v) {
+            <option [value]="v">v{{ v }}</option>
+          }
+        </select>
+        @if (
+          createJobForm.get("version")?.invalid &&
+          createJobForm.get("version")?.touched
+        ) {
+          <span class="form-error">Version is required</span>
+        }
+      </div>
+    }
+
+    <div class="form-group">
+      <label class="form-label" for="payload">Payload (JSON)</label>
+      <textarea
+        id="payload"
+        class="form-textarea form-textarea-mono"
+        formControlName="payload"
+        rows="8"
+        placeholder='e.g. { "key": "value" }'
+      ></textarea>
+      @if (
+        createJobForm.get("payload")?.invalid &&
+        createJobForm.get("payload")?.touched
+      ) {
+        <span class="form-error">Payload is required</span>
+      }
+    </div>
+  </form>
+
+  <div dialog-footer>
+    <button app-button variant="ghost" (click)="onClose()">Cancel</button>
+    <button
+      app-button
+      variant="primary"
+      [loading]="submitting"
+      (click)="onSubmit()"
+    >
+      Create
+    </button>
+  </div>
+</app-dialog>

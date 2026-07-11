@@ -1,0 +1,40 @@
+<aside class="sidebar" [class.sidebar-collapsed]="collapsed">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg lucideLayoutGrid size="2.4rem"></svg>
+      </div>
+      @if (!collapsed) {
+        <span class="sidebar-brand">TaskMaster</span>
+      }
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    @for (item of navItems; track item.route) {
+      <a
+        class="nav-item"
+        [routerLink]="item.route"
+        routerLinkActive="nav-item-active"
+        [routerLinkActiveOptions]="{ exact: item.route === navService.routes.dashboard }"
+        [attr.aria-label]="item.label"
+      >
+        <span class="nav-icon">
+          <ng-container *ngComponentOutlet="item.icon; inputs: { size: '2rem' }" />
+        </span>
+        @if (!collapsed) {
+          <span class="nav-label">{{ item.label }}</span>
+        }
+        @if (item.badge && !collapsed) {
+          <span class="nav-badge">{{ item.badge }}</span>
+        }
+      </a>
+    }
+  </nav>
+
+  <div class="sidebar-footer">
+    <button class="collapse-btn" (click)="toggle()" aria-label="Toggle sidebar">
+      <svg lucideChevronLeft size="1.8rem"></svg>
+    </button>
+  </div>
+</aside>

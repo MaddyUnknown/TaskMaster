@@ -1,0 +1,20 @@
+@if (open) {
+  <div class="dialog-overlay" (click)="close.emit()">
+    <div class="dialog" (click)="$event.stopPropagation()" [style.max-width]="maxWidth">
+      <div class="dialog-header">
+        <h2 class="dialog-title">{{ title }}</h2>
+        <button class="dialog-close" (click)="close.emit()" aria-label="Close dialog">
+          <svg lucideX size="1.8rem"></svg>
+        </button>
+      </div>
+      <div class="dialog-body">
+        <ng-content></ng-content>
+      </div>
+      @if (showFooter) {
+        <div class="dialog-footer">
+          <ng-content select="[dialog-footer]"></ng-content>
+        </div>
+      }
+    </div>
+  </div>
+}

@@ -12,8 +12,6 @@ namespace TaskMaster.API.Entities
         [Required]
         public string WorkerName { get; set; } = string.Empty;
 
-        public string? WorkerDisplayName { get; set; }
-
         [Required]
         public WorkerStatusEnum Status { get; set; }
 
@@ -22,7 +20,6 @@ namespace TaskMaster.API.Entities
         public DateTime WorkerExpiresAtTimestamp { get; set; }
 
         //Navigation Property
-        public ICollection<Job> AssignedJobs { get; set; } = null!;
         public ICollection<WorkerCapability> WorkerCapabilities { get; set; } = null!;
     }
 }

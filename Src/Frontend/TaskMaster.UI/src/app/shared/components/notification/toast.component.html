@@ -1,0 +1,33 @@
+<div class="toast-container" role="status" aria-live="polite">
+  @for (notif of notificationService.notifications; track notif.id) {
+    <div class="toast toast-{{ notif.type }}">
+      <div class="toast-icon">
+        @switch (notif.type) {
+          @case ("success") {
+            <svg lucideCircleCheck size="1.8rem"></svg>
+            }
+            @case ("error") {
+            <svg lucideCircleX size="1.8rem"></svg>
+            }
+            @case ("warning") {
+            <svg lucideTriangleAlert size="1.8rem"></svg>
+            }
+            @case ("info") {
+            <svg lucideInfo size="1.8rem"></svg>
+          }
+        }
+      </div>
+      <div class="toast-content">
+        <p class="toast-title">{{ notif.title }}</p>
+        <p class="toast-message">{{ notif.message }}</p>
+      </div>
+      <button
+        class="toast-close"
+        (click)="notificationService.remove(notif.id)"
+        aria-label="Dismiss"
+      >
+        &times;
+      </button>
+    </div>
+  }
+</div>

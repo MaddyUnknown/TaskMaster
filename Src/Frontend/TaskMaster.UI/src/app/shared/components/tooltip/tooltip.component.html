@@ -1,0 +1,13 @@
+<div
+  class="tooltip-container"
+  [class.tooltip-top]="position === 'top'"
+  [class.tooltip-bottom]="position === 'bottom'"
+  [class.tooltip-left]="position === 'left'"
+  [class.tooltip-right]="position === 'right'"
+  [class.show]="show"
+>
+  <div class="tooltip-arrow"></div>
+  <div class="tooltip-content">
+    <ng-content></ng-content>
+  </div>
+</div>

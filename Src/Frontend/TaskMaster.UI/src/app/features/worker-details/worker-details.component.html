@@ -1,0 +1,77 @@
+@if (worker; as w) {
+  <app-content
+    [title]="w.name"
+    [breadcrumbs]="[{ label: 'Workers', route: nav.routes.workers }, { label: w.name }]"
+  >
+    <div class="details-container">
+      <div class="details-main">
+        <app-card title="Worker Information">
+          <div class="info-rows">
+            <div class="info-row">
+              <span class="info-label">Worker Id</span>
+              <span class="info-value">{{ w.id }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Name</span>
+              <span class="info-value">{{ w.name }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Status</span>
+              <app-badge
+                [variant]="
+                  w.status === WorkerStatus.Active ? 'active' : 'inactive'
+                "
+                [dot]="true"
+                >{{
+                  w.status === WorkerStatus.Active ? "Active" : "Inactive"
+                }}</app-badge
+              >
+            </div>
+            <div class="info-row">
+              <span class="info-label">Created</span>
+              <span class="info-value">{{
+                w.createdDateTime | date: "MMM dd, y, hh:mm:ss a"
+              }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">Last Heartbeat</span>
+              <span class="info-value">{{
+                w.lastHeartbeatTimestamp
+                  ? (w.lastHeartbeatTimestamp | date: "MMM dd, y, hh:mm:ss a")
+                  : "Never"
+              }}</span>
+            </div>
+          </div>
+        </app-card>
+      </div>
+
+      <div class="details-side">
+        <app-card title="Capabilities">
+          <div class="caps-list">
+            @for (cap of w.capabilities; track cap.jobTypeId) {
+              <div class="cap-item">
+                <div class="cap-name">{{ cap.jobTypeName }}</div>
+                <app-badge>v{{ cap.jobTypeVersion }}</app-badge>
+              </div>
+            }
+          </div>
+        </app-card>
+      </div>
+    </div>
+  </app-content>
+} @else if (notFound) {
+  <app-content
+    title="Worker Not Found"
+    [breadcrumbs]="[
+      { label: 'Workers', route: nav.routes.workers },
+      { label: 'Not Found' },
+    ]"
+  >
+    <p>The requested worker could not be found.</p>
+    <a [routerLink]="nav.routes.workers" class="back-link">Back to Workers</a>
+  </app-content>
+} @else {
+  <app-content
+    ><app-loading type="spinner" text="Loading worker..."
+  /></app-content>
+}

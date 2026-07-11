@@ -1,0 +1,27 @@
+<app-card title="Jobs Per Hour" subtitle="Last 24 hours">
+  @if (!loading) {
+    <div class="chart">
+      @for (item of data; track item.label) {
+        <div
+          class="chart-bar-group"
+          (mouseenter)="hoveredIndex = $index"
+          (mouseleave)="hoveredIndex = null"
+        >
+          <span class="chart-value">{{ item.value }}</span>
+          <div class="chart-bar-wrapper">
+            <div class="chart-bar" [style.height.%]="item.height"></div>
+            <app-tooltip position="bottom" [show]="hoveredIndex === $index">
+              <span class="tooltip-range"
+                >{{ item.start | date: "HH:mm" }} –
+                {{ item.end | date: "HH:mm" }}</span
+              >
+            </app-tooltip>
+          </div>
+          <span class="chart-label">{{ item.label }}</span>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="chart-loading">Loading chart data...</div>
+  }
+</app-card>

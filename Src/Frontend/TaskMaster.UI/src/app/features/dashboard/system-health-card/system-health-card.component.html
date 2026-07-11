@@ -1,0 +1,42 @@
+<app-card title="System Health" class="dashboard-health">
+  @if (!loading) {
+    <div class="health-inner">
+      <div class="health-row">
+        <span
+          class="health-dot"
+          [style.background]="healthColor(health?.api?.status ?? '')"
+        ></span>
+        <svg lucideServer size="1.6rem"></svg>
+        <span class="health-name">API</span>
+        <span
+          class="health-badge"
+          [style.background]="healthColor(health?.api?.status ?? '')"
+          >{{ health?.api?.status ?? "-" }}</span
+        >
+      </div>
+      <div class="health-row">
+        <span
+          class="health-dot"
+          [style.background]="healthColor(health?.database?.status ?? '')"
+        ></span>
+        <svg lucideDatabase size="1.6rem"></svg>
+        <span class="health-name">Database</span>
+        <span
+          class="health-badge"
+          [style.background]="healthColor(health?.database?.status ?? '')"
+          >{{ health?.database?.status ?? "-" }}</span
+        >
+      </div>
+      <div class="health-row">
+        <span class="health-dot" [style.background]="workersColor()"></span>
+        <svg lucideUsers size="1.6rem"></svg>
+        <span class="health-name">Workers</span>
+        <span class="health-badge" [style.background]="workersColor()">{{
+          workersStatus()
+        }}</span>
+      </div>
+    </div>
+  } @else {
+    <div class="health-loading">Loading health data...</div>
+  }
+</app-card>

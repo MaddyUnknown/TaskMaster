@@ -2,6 +2,7 @@ using Moq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Services;
 
@@ -115,30 +116,9 @@ public class DashboardServiceTests
 
         var result = await CreateService().GetSystemMetricsAsync();
 
-        Assert.That(result.SuccessRate, Is.EqualTo(80.0));
         Assert.That(result.ActiveWorkers, Is.EqualTo(4));
-        Assert.That(result.QueueDepth, Is.EqualTo(10));
-    }
-
-    [Test]
-    public async Task GetSystemMetricsAsync_WhenNoJobs_ShouldReturnDefaultSuccessRate()
-    {
-        _dashboardQuery
-            .Setup(q => q.GetDashboardDataAsync())
-            .ReturnsAsync(new DashboardData
-            {
-                QueuedJobs = 0,
-                InProgressJobs = 0,
-                CompletedJobs = 0,
-                FailedJobs = 0,
-                ActiveWorkers = 0,
-                InactiveWorkers = 0,
-                DatabaseHealthy = true
-            });
-
-        var result = await CreateService().GetSystemMetricsAsync();
-
-        Assert.That(result.SuccessRate, Is.EqualTo(100.0));
+        Assert.That(result.TotalJobs, Is.EqualTo(100));
+        Assert.That(result.QueuedJobs, Is.EqualTo(10));
     }
 
     [Test]
@@ -149,17 +129,16 @@ public class DashboardServiceTests
             .ReturnsAsync(new DashboardData
             {
                 DatabaseHealthy = true,
-                ActiveWorkers = 3,
-                InactiveWorkers = 1,
+                ActiveWorkers = 4,
+                InactiveWorkers = 0,
                 QueuedJobs = 5
             });
 
         var result = await CreateService().GetSystemHealthAsync();
 
-        Assert.That(result.Database.Status, Is.EqualTo(HealthStatus.Healthy));
-        Assert.That(result.Api.Status, Is.EqualTo(HealthStatus.Healthy));
-        Assert.That(result.Queue.Status, Is.EqualTo(HealthStatus.Healthy));
-        Assert.That(result.Workers.Status, Is.EqualTo(HealthStatus.Healthy));
+        Assert.That(result.Database.Status, Is.EqualTo(HealthStatusEnum.Healthy));
+        Assert.That(result.Api.Status, Is.EqualTo(HealthStatusEnum.Healthy));
+        Assert.That(result.Workers.Status, Is.EqualTo(HealthStatusEnum.Healthy));
     }
 
     [Test]
@@ -177,7 +156,55 @@ public class DashboardServiceTests
 
         var result = await CreateService().GetSystemHealthAsync();
 
-        Assert.That(result.Database.Status, Is.EqualTo(HealthStatus.Unhealthy));
-        Assert.That(result.Workers.Status, Is.EqualTo(HealthStatus.Degraded));
+        Assert.That(result.Database.Status, Is.EqualTo(HealthStatusEnum.Unhealthy));
+        Assert.That(result.Workers.Status, Is.EqualTo(HealthStatusEnum.Degraded));
+    }
+
+    [Test]
+    public async Task GetJobStatsAsync_WhenJobsExist_ShouldReturnBuckets()
+    {
+        var now = new DateTime(2026, 7, 11, 12, 0, 0);
+        var expected = new List<JobStatsItem>
+        {
+            new() { BucketStart = now.AddHours(-22), BucketEnd = now.AddHours(-20), BucketHour = "14:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-20), BucketEnd = now.AddHours(-18), BucketHour = "16:00", JobCount = 5 },
+            new() { BucketStart = now.AddHours(-18), BucketEnd = now.AddHours(-16), BucketHour = "18:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-16), BucketEnd = now.AddHours(-14), BucketHour = "20:00", JobCount = 3 },
+            new() { BucketStart = now.AddHours(-14), BucketEnd = now.AddHours(-12), BucketHour = "22:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-12), BucketEnd = now.AddHours(-10), BucketHour = "00:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-10), BucketEnd = now.AddHours(-8), BucketHour = "02:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-8), BucketEnd = now.AddHours(-6), BucketHour = "04:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-6), BucketEnd = now.AddHours(-4), BucketHour = "06:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-4), BucketEnd = now.AddHours(-2), BucketHour = "08:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(-2), BucketEnd = now.AddHours(0), BucketHour = "10:00", JobCount = 0 },
+            new() { BucketStart = now.AddHours(0), BucketEnd = now.AddHours(2), BucketHour = "12:00", JobCount = 0 },
+        };
+
+        _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
+
+        var result = (await CreateService().GetJobStatsAsync()).ToList();
+
+        Assert.That(result, Has.Count.EqualTo(12));
+        Assert.That(result.Single(i => i.BucketHour == "16:00").JobCount, Is.EqualTo(5));
+        Assert.That(result.Single(i => i.BucketHour == "20:00").JobCount, Is.EqualTo(3));
+    }
+
+    [Test]
+    public async Task GetJobStatsAsync_WhenNoJobsLast24h_ShouldReturnAllZeros()
+    {
+        var now = new DateTime(2026, 7, 11, 12, 0, 0);
+        var hours = new[] { "14:00", "16:00", "18:00", "20:00", "22:00", "00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00" };
+        var expected = hours.Select((h, i) => new JobStatsItem
+        {
+            BucketStart = now.AddHours(-22 + i * 2),
+            BucketEnd = now.AddHours(-20 + i * 2),
+            BucketHour = h,
+            JobCount = 0
+        }).ToList();
+        _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
+
+        var result = await CreateService().GetJobStatsAsync();
+
+        Assert.That(result.All(i => i.JobCount == 0), Is.True);
     }
 }

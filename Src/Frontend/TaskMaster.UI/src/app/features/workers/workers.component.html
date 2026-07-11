@@ -1,0 +1,61 @@
+<app-content
+  title="Workers"
+  description="View and manage registered workers"
+  [breadcrumbs]="[{ label: 'Workers' }]"
+>
+  <div class="filters">
+    <div class="filter-tabs">
+      @for (tab of filterTabs; track tab.value) {
+        <button
+          class="filter-tab"
+          [class.filter-tab-active]="activeFilter === tab.value"
+          (click)="setFilter(tab.value)"
+        >
+          {{ tab.label }}
+          <span class="filter-count">{{ tab.count }}</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (loading) {
+    <app-loading type="pulse" text="Loading workers..." />
+  } @else if (filteredWorkers.length === 0) {
+    <app-empty-state
+      icon="🖥️"
+      title="No workers"
+      description="No workers match the current filter."
+    />
+  } @else {
+    <div class="table-wrapper">
+      <table class="data-table" role="table">
+        <thead>
+          <tr>
+            <th>Worker ID</th>
+            <th>Name</th>
+            <th>Status</th>
+            <th>Last Heartbeat</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (worker of filteredWorkers; track worker.id) {
+            <tr class="data-row" [routerLink]="['/workers', worker.id]">
+              <td class="cell-mono">{{ worker.id }}</td>
+              <td>{{ worker.name }}</td>
+              <td>
+                <app-badge
+                  [variant]="statusVariant(worker.status)"
+                  [dot]="true"
+                  >{{ statusLabel(worker.status) }}</app-badge
+                >
+              </td>
+              <td>
+                <span class="cell-muted">{{ heartbeatLabel(worker) }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</app-content>

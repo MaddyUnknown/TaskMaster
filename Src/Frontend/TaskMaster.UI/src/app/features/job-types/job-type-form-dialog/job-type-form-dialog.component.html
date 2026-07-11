@@ -1,0 +1,81 @@
+<app-dialog
+  [open]="open"
+  [title]="mode === 'add-version' ? 'Add New Version' : 'Create Job Type'"
+  [showFooter]="true"
+  (close)="onClose()"
+>
+  <form class="form-layout" [formGroup]="jobTypeForm" (ngSubmit)="onSubmit()">
+    <div class="form-group">
+      <label class="form-label" for="name">Name</label>
+      <input
+        id="name"
+        class="form-input"
+        type="text"
+        formControlName="name"
+        [attr.disabled]="mode === 'add-version' ? '' : null"
+        placeholder="e.g. DataProcessing"
+      />
+      @if (
+        jobTypeForm.get("name")?.invalid && jobTypeForm.get("name")?.touched
+      ) {
+        <span class="form-error">Name is required</span>
+      }
+    </div>
+
+    @if (mode === "add-version" && version) {
+      <div class="form-group">
+        <label class="form-label">Version</label>
+        <input
+          class="form-input"
+          [attr.disabled]="true"
+          value="v{{ version }}"
+        />
+      </div>
+    }
+
+    <div class="form-group">
+      <label class="form-label" for="description">Description</label>
+      <textarea
+        id="description"
+        class="form-textarea"
+        formControlName="description"
+        rows="2"
+        placeholder="Describe what this job type does"
+      ></textarea>
+      @if (
+        jobTypeForm.get("description")?.invalid &&
+        jobTypeForm.get("description")?.touched
+      ) {
+        <span class="form-error">Description is required</span>
+      }
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="schema">Schema (JSON)</label>
+      <textarea
+        id="schema"
+        class="form-textarea form-textarea-mono"
+        formControlName="schema"
+        rows="6"
+        placeholder='e.g. { "type": "object", "properties": {} }'
+      ></textarea>
+      @if (
+        jobTypeForm.get("schema")?.invalid && jobTypeForm.get("schema")?.touched
+      ) {
+        <span class="form-error">Schema is required</span>
+      }
+    </div>
+  </form>
+
+  <div dialog-footer>
+    <button app-button variant="ghost" (click)="onClose()">Cancel</button>
+    <button
+      app-button
+      variant="primary"
+      [loading]="submitting"
+      (click)="onSubmit()"
+    >
+      {{ mode === "add-version" ? "Add Version" : "Create" }}
+    </button>
+  </div>
+</app-dialog>
