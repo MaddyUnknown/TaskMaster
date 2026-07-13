@@ -314,6 +314,31 @@ public class RepositoryBehaviorTests : IntegrationTestBase
     }
 
     [Test]
+    public async Task GetByWorkerNameAsync_WhenExists_ShouldReturnWorker()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var worker = await repository.GetByWorkerNameAsync("worker-a");
+
+        // Assert
+        Assert.That(worker, Is.Not.Null);
+        Assert.That(worker!.WorkerName, Is.EqualTo("worker-a"));
+        Assert.That(worker.Status, Is.EqualTo(WorkerStatusEnum.Active));
+        Assert.That(worker.WorkerCapabilities, Has.Count.EqualTo(1));
+    }
+
+    [Test]
     public async Task Repository_GetById_WhenExists_ShouldReturnEntity()
     {
         // Arrange

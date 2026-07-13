@@ -36,13 +36,22 @@ internal static class ServiceTestData
         Schema = "{}"
     };
 
+    public static Worker InactiveWorker(Guid? publicId = null, long id = 102, ICollection<JobType>? capabilities = null) => new()
+    {
+        Id = id,
+        WorkerPublicId = publicId ?? Guid.NewGuid(),
+        WorkerName = "worker-a",
+        Status = WorkerStatusEnum.InActive,
+        WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToList()
+    };
+
     public static Worker ActiveWorker(Guid? publicId = null, long id = 101, ICollection<JobType>? capabilities = null) => new()
     {
         Id = id,
         WorkerPublicId = publicId ?? Guid.NewGuid(),
         WorkerName = "worker-a",
         Status = WorkerStatusEnum.Active,
-        WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToArray()
+        WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToList()
     };
 
     public static Job QueuedJob(JobType? jobType = null, long id = 501) => new()

@@ -23,6 +23,19 @@ namespace TaskMaster.API.Repositories
             return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).OrderByDescending(w => w.Id).ToListAsync();
         }
 
+        public async Task<Worker?> GetByWorkerNameAsync(string workerName, bool withLock = false)
+        {
+            var sql = withLock
+                ? $"SELECT * FROM Workers WITH (UPDLOCK) WHERE WorkerName = {{0}}"
+                : $"SELECT * FROM Workers WHERE WorkerName = {{0}}";
+
+            return await _context.Workers
+                .FromSqlRaw(sql, workerName)
+                .Include(w => w.WorkerCapabilities)
+                .ThenInclude(wc => wc.JobType)
+                .FirstOrDefaultAsync();
+        }
+
         public async Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
             FormattableString sql = $@"

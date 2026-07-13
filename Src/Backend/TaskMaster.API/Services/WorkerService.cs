@@ -42,14 +42,44 @@ namespace TaskMaster.API.Services
             var errors = _registerWorkerValidator.Validate(registerWorker);
             if (errors.Count > 0) throw new ValidationException(errors);
 
-            var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
-            if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new ValidationException(ErrorMessage.OneOrMoreJobTypeCapabilitiesDoNotExist());
+            await _unitOfWork.BeginTransactionAsync();
 
-            var worker = registerWorker.ToWorker(jobTypes);
-            _workerCRUDRepository.Add(worker);
-            await _unitOfWork.SaveAsync();
+            try
+            {
+                var worker = await _workerRepository.GetByWorkerNameAsync(registerWorker.WorkerName, withLock: true);
+                if (worker != null && worker.Status == WorkerStatusEnum.Active) throw new ValidationException(ErrorMessage.ActiveWorkerAlreadyExists(registerWorker.WorkerName));
 
-            return worker.ToRegisterWorkerResponse(_workerConfigOption.Value.HeartBeatIntervalSeconds);
+                var jobTypes = await _jobTypeRepository.GetByJobTypeNameAndVersionAsync(registerWorker.JobTypeCapabilities.Select(c => (c.Name, c.Version)));
+                if (jobTypes.Count() != registerWorker.JobTypeCapabilities.Count()) throw new ValidationException(ErrorMessage.OneOrMoreJobTypeCapabilitiesDoNotExist());
+
+                if (worker == null)
+                {
+                    worker = registerWorker.ToWorker(jobTypes);
+                    _workerCRUDRepository.Add(worker);
+                }
+                else
+                {
+                    await _jobRepository.UnassignJobForWorkerIdAsync(worker.Id);
+                    worker.WorkerCapabilities.Clear();
+                    foreach (var jobType in jobTypes)
+                    {
+                        worker.WorkerCapabilities.Add(new WorkerCapability { JobType = jobType });
+                    }
+                    worker.Status = WorkerStatusEnum.Active;
+                    _workerCRUDRepository.Update(worker);
+                }
+
+                await _unitOfWork.SaveAsync();
+                await _unitOfWork.CommitTransactionAsync();
+
+                return worker.ToRegisterWorkerResponse(_workerConfigOption.Value.HeartBeatIntervalSeconds);
+            }
+            catch
+            {
+                await _unitOfWork.RollbackTransactionAsync();
+                throw;
+            }
+            
         }
 
         public async Task<WorkerDetails> RemoveAsync(Guid workerId)

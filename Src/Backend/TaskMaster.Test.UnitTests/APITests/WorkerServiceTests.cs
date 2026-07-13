@@ -64,6 +64,10 @@ public class WorkerServiceTests
             .Setup(r => r.GetByJobTypeNameAndVersionAsync(It.IsAny<IEnumerable<(string jobTypeName, long jobTypeVersion)>>()))
             .ReturnsAsync([emailJobType, videoJobType]);
 
+        _workerRepository
+            .Setup(r => r.GetByWorkerNameAsync(request.WorkerName, true))
+            .ReturnsAsync((Worker?)null);
+
         _workerCrudRepository.Setup(r => r.Add(It.IsAny<Worker>()))
             .Callback<Worker>(w => persisted = w);
 
@@ -99,6 +103,10 @@ public class WorkerServiceTests
             .Setup(r => r.GetByJobTypeNameAndVersionAsync(It.IsAny<IEnumerable<(string jobTypeName, long jobTypeVersion)>>()))
             .ReturnsAsync([ServiceTestData.EmailJobType()]);
 
+        _workerRepository
+            .Setup(r => r.GetByWorkerNameAsync(request.WorkerName, true))
+            .ReturnsAsync((Worker?)null);
+
         _workerCrudRepository.Setup(r => r.Add(It.IsAny<Worker>()));
 
         // Act
@@ -108,6 +116,7 @@ public class WorkerServiceTests
         Assert.ThrowsAsync<ValidationException>(async () => await act());
 
         _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Never);
+        _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Never);
     }
 
     [Test]
@@ -121,6 +130,75 @@ public class WorkerServiceTests
         // Act + Assert
         Assert.ThrowsAsync<ValidationException>(async () => await CreateService().RegisterAsync(new RegisterWorker()));
         _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Never);
+        _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Never);
+    }
+
+    [Test]
+    public void RegisterAsync_WhenWorkerNameAlreadyActive_ShouldThrowException()
+    {
+        // Arrange
+        var existingWorker = ServiceTestData.ActiveWorker();
+        var request = new RegisterWorker
+        {
+            WorkerName = existingWorker.WorkerName,
+            JobTypeCapabilities = [ServiceTestData.EmailJobTypeRef]
+        };
+
+        _workerRepository
+            .Setup(r => r.GetByWorkerNameAsync(request.WorkerName, true))
+            .ReturnsAsync(existingWorker);
+
+        // Act
+        var act = () => CreateService().RegisterAsync(request);
+
+        // Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+
+        _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Never);
+        _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Never);
+    }
+
+    [Test]
+    public async Task RegisterAsync_WhenInactiveWorkerReRegisters_ShouldReactivateWorker()
+    {
+        // Arrange
+        var emailJobType = ServiceTestData.EmailJobType();
+        var inactiveWorker = ServiceTestData.InactiveWorker(capabilities: [emailJobType]);
+        Worker? updated = null;
+
+        var request = new RegisterWorker
+        {
+            WorkerName = inactiveWorker.WorkerName,
+            JobTypeCapabilities = [ServiceTestData.EmailJobTypeRef, ServiceTestData.VideoJobTypeRef]
+        };
+
+        _workerRepository
+            .Setup(r => r.GetByWorkerNameAsync(request.WorkerName, true))
+            .ReturnsAsync(inactiveWorker);
+
+        _jobTypeRepository
+            .Setup(r => r.GetByJobTypeNameAndVersionAsync(It.IsAny<IEnumerable<(string jobTypeName, long jobTypeVersion)>>()))
+            .ReturnsAsync([emailJobType, ServiceTestData.VideoJobType()]);
+
+        _jobRepository
+            .Setup(r => r.UnassignJobForWorkerIdAsync(inactiveWorker.Id))
+            .ReturnsAsync(0);
+
+        _workerCrudRepository.Setup(r => r.Update(It.IsAny<Worker>()))
+            .Callback<Worker>(w => updated = w);
+
+        // Act
+        var result = await CreateService().RegisterAsync(request);
+
+        // Assert
+        Assert.That(updated, Is.Not.Null);
+        Assert.That(updated!.Status, Is.EqualTo(WorkerStatusEnum.Active));
+        Assert.That(updated.WorkerCapabilities, Has.Count.EqualTo(2));
+
+        Assert.That(result.WorkerDetails.Status, Is.EqualTo(WorkerStatusEnum.Active));
+
+        _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Once);
+        _jobRepository.Verify(r => r.UnassignJobForWorkerIdAsync(inactiveWorker.Id), Times.Once);
     }
 
     [Test]

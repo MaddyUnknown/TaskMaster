@@ -8,4 +8,5 @@ internal static class ErrorMessage
     internal static string CapabilityFieldRequired(int index, string fieldName) => $"Job type capability at index {index}: {fieldName} is required.";
     internal static string CapabilityMustBeGreaterThanZero(int index, string fieldName) => $"Job type capability at index {index}: {fieldName} must be greater than 0.";
     internal static string OneOrMoreJobTypeCapabilitiesDoNotExist() => "One or more job type capabilities do not exist.";
+    internal static string ActiveWorkerAlreadyExists(string workerName) => $"Active worker with name '{workerName}' already exists";
 }
