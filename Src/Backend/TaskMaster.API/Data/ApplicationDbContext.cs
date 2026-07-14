@@ -8,7 +8,6 @@ namespace TaskMaster.API.Data
 {
     public class ApplicationDbContext : DbContext
     {
-        private IOptions<WorkerConfig> _workerConfigOption;
         private IEnumerable<ISaveInterceptor> _saveInterceptors;
 
         public DbSet<Worker> Workers { get; set; }
@@ -16,10 +15,9 @@ namespace TaskMaster.API.Data
         public DbSet<Job> Jobs { get; set; }
         public DbSet<JobType> JobTypes { get; set; }
 
-        public ApplicationDbContext(DbContextOptions options, IEnumerable<ISaveInterceptor> saveInterceptors, IOptions<WorkerConfig> workerConfigOption) : base(options)
+        public ApplicationDbContext(DbContextOptions options, IEnumerable<ISaveInterceptor> saveInterceptors) : base(options)
         {
             _saveInterceptors = saveInterceptors;
-            _workerConfigOption = workerConfigOption;
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -54,16 +52,13 @@ namespace TaskMaster.API.Data
                 .HasIndex(w => new { w.WorkerPublicId })
                 .IsUnique();
 
-            var workerExpiryIntervalSec = _workerConfigOption.Value.WorkerExpiryIntervalSeconds;
             modelBuilder.Entity<Worker>()
                 .Property(w => w.WorkerExpiresAtTimestamp)
-                .HasColumnType("datetime2")
-                .HasDefaultValueSql($"DATEADD(SECOND, {workerExpiryIntervalSec}, SYSDATETIME())");
+                .HasColumnType("datetime2");
 
             modelBuilder.Entity<Worker>()
                 .Property(w => w.LastHeartBeatTimestamp)
-                .HasColumnType("datetime2")
-                .HasDefaultValueSql("SYSDATETIME()");
+                .HasColumnType("datetime2");
 
             // WorkerCapability Setup
             modelBuilder.Entity<WorkerCapability>()

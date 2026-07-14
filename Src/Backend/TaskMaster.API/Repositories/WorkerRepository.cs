@@ -38,11 +38,16 @@ namespace TaskMaster.API.Repositories
 
         public async Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
+            var currentDateTime = DateTime.Now;
+
             FormattableString sql = $@"
                 UPDATE Workers
-                SET WorkerExpiresAtTimestamp = DATEADD(SECOND, {workerExpiryIntervalSeconds}, SYSDATETIME()), ModifyDateTime = {DateTime.Now}
+                SET 
+                    LastHeartBeatTimestamp = {currentDateTime},
+                    WorkerExpiresAtTimestamp = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)}, 
+                    ModifyDateTime = {currentDateTime}
                 WHERE WorkerPublicId = {workerPublicId}
-                AND WorkerExpiresAtTimestamp > SYSDATETIME()
+                AND WorkerExpiresAtTimestamp <= {currentDateTime}
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);

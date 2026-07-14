@@ -54,7 +54,7 @@ namespace TaskMaster.API.Services
 
                 if (worker == null)
                 {
-                    worker = registerWorker.ToWorker(jobTypes);
+                    worker = registerWorker.ToWorker(jobTypes, _workerConfigOption.Value.WorkerExpiryIntervalSeconds);
                     _workerCRUDRepository.Add(worker);
                 }
                 else
@@ -65,6 +65,9 @@ namespace TaskMaster.API.Services
                     {
                         worker.WorkerCapabilities.Add(new WorkerCapability { JobType = jobType });
                     }
+
+                    worker.LastHeartBeatTimestamp = DateTime.Now;
+                    worker.WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(_workerConfigOption.Value.WorkerExpiryIntervalSeconds);
                     worker.Status = WorkerStatusEnum.Active;
                     _workerCRUDRepository.Update(worker);
                 }

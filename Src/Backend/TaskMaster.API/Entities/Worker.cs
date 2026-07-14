@@ -15,8 +15,10 @@ namespace TaskMaster.API.Entities
         [Required]
         public WorkerStatusEnum Status { get; set; }
 
+        [Required]
         public DateTime LastHeartBeatTimestamp { get; set; }
 
+        [Required]
         public DateTime WorkerExpiresAtTimestamp { get; set; }
 
         //Navigation Property

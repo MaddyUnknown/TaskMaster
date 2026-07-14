@@ -10,13 +10,15 @@ namespace TaskMaster.API.Mappers
 
     public static class WorkerMapper
     {
-        public static Worker ToWorker(this RegisterWorker request, IEnumerable<JobType> jobTypes)
+        public static Worker ToWorker(this RegisterWorker request, IEnumerable<JobType> jobTypes, int workerExpiryIntervalSeconds)
         {
             return new Worker
             {
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = request.WorkerName,
                 WorkerCapabilities = jobTypes.Select(t => new WorkerCapability { JobType = t }).ToList(),
+                LastHeartBeatTimestamp = DateTime.Now,
+                WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(workerExpiryIntervalSeconds),
                 Status = WorkerStatusEnum.Active,
             };
         }

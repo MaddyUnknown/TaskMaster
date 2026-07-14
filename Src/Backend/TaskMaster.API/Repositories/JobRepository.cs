@@ -47,18 +47,20 @@ namespace TaskMaster.API.Repositories
 
         public async Task<Job?> GetNextJobForWorkerAsync(long workerId)
         {
+            var currentDateTime = DateTime.Now;
+
             FormattableString sql = $@"
                 WITH cte AS
                 (
                     SELECT TOP 1 j.*
                     FROM Workers w
-                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp > SYSDATETIME() AND Status = {WorkerStatusEnum.Active}
+                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp <= {currentDateTime} AND Status = {WorkerStatusEnum.Active}
                     INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobTypeId = wc.JobTypeId
                     WHERE j.Status = {JobStatusEnum.Queued}
                     ORDER BY j.Id
                 )
                 UPDATE cte
-                SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = {workerId}, ModifyDateTime = {DateTime.Now}
+                SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = {workerId}, ModifyDateTime = {currentDateTime}
                 OUTPUT inserted.*;
             ";
 
