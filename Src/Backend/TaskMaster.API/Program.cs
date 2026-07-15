@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TaskMaster.API.BackgroundServices;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
 using TaskMaster.API.Interfaces;
@@ -11,7 +12,9 @@ using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Middleware;
+using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
+using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Queries;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
@@ -58,6 +61,7 @@ namespace TaskMaster.API
             // Application dependencies
             builder.Services.AddOptions<WorkerConfig>().Bind(builder.Configuration.GetSection("WorkerConfig"));
 
+
             builder.Services.AddSingleton<ISaveInterceptor, AuditDateTimeSaveInterceptor>();
             builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -73,14 +77,17 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IDashboardService, DashboardService>();
 
             // Validators
-            builder.Services.AddTransient<IValidator<Models.Jobs.CreateJob>, CreateJobValidator>();
-            builder.Services.AddTransient<IValidator<Models.JobTypes.CreateJobType>, CreateJobTypeValidator>();
-            builder.Services.AddTransient<IValidator<Models.Workers.RegisterWorker>, RegisterWorkerValidator>();
+            builder.Services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();
+            builder.Services.AddTransient<IValidator<CreateJobType>, CreateJobTypeValidator>();
+            builder.Services.AddTransient<IValidator<RegisterWorker>, RegisterWorkerValidator>();
             builder.Services.AddTransient<IValidator<JobTypeRef>, JobTypeRefValidator>();
 
             // Swagger services
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
+
+            // Backgroup services
+            builder.Services.AddHostedService<WorkerExpiryBackgroundService>();
 
             var app = builder.Build();
 

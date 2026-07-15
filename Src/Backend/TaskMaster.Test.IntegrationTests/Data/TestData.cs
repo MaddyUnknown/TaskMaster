@@ -12,12 +12,14 @@ internal static class TestData
         Schema = "{}"
     };
 
-    public static Worker Worker(string name, IEnumerable<JobType>? jobTypes = null) => new()
+    public static Worker Worker(string name, IEnumerable<JobType>? jobTypes = null, int workerExpiryIntervalSeconds = 30) => new()
     {
         WorkerPublicId = Guid.NewGuid(),
         WorkerName = name,
         Status = WorkerStatusEnum.Active,
-        WorkerCapabilities = jobTypes == null ? [] : jobTypes.Select(jt => new WorkerCapability { JobType = jt }).ToArray()
+        WorkerCapabilities = jobTypes == null ? [] : jobTypes.Select(jt => new WorkerCapability { JobType = jt }).ToArray(),
+        LastHeartBeatTimestamp = DateTime.Now,
+        WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(workerExpiryIntervalSeconds),
     };
 
     public static Job Job(JobType jobType, string payload = "{\"id\":1}") => new()

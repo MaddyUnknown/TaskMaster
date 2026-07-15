@@ -45,6 +45,25 @@ namespace TaskMaster.API.Repositories
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
         }
 
+        public async Task<int> UnassignJobsForInactiveWorkersAsync()
+        {
+            var currentDateTime = DateTime.Now;
+
+            FormattableString sql = $@"
+                UPDATE j
+                SET 
+                    j.Status = {(int)JobStatusEnum.Queued}, 
+                    j.AssignedWorkerId = NULL, 
+                    j.ModifyDateTime = {currentDateTime}
+                FROM Jobs j
+                INNER JOIN Workers w ON w.Id = j.AssignedWorkerId
+                WHERE w.Status = {(int)WorkerStatusEnum.InActive}
+                AND j.Status = {(int)JobStatusEnum.InProgress};
+            ";
+
+            return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
+        }
+
         public async Task<Job?> GetNextJobForWorkerAsync(long workerId)
         {
             var currentDateTime = DateTime.Now;

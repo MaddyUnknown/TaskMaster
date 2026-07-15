@@ -7,6 +7,7 @@ namespace TaskMaster.API.Interfaces.Repositories
         Task<Job?> GetByJobPublicIdAsync(Guid jobPublicId);
         Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId);
         Task<int> UnassignJobForWorkerIdAsync(long workerId);
+        Task<int> UnassignJobsForInactiveWorkersAsync();
         Task<Job?> GetNextJobForWorkerAsync(long workerId);
         Task<IEnumerable<Job>> GetAllJobsAsync();
     }

@@ -77,7 +77,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         (var workerId, var workerExpiresAtTimestamp) = await ExecuteDbAsync(async db =>
         {
             var jobType = TestData.JobType();
-            var worker = TestData.Worker("worker-a", [jobType]);
+            var worker = TestData.Worker("worker-a", [jobType], workerExpiryInterval);
             db.Add(worker);
             await db.SaveChangesAsync();
 
@@ -404,5 +404,143 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         // Assert
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.Name, Is.EqualTo("email"));
+    }
+
+    [Test]
+    public async Task DeactivateExpiredWorkers_WhenExpiredWorkerExists_ShouldSetStatusToInactive()
+    {
+        // Arrange
+        var workerPublicId = Guid.Empty;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            worker.WorkerExpiresAtTimestamp = DateTime.Now.AddDays(-1);
+            worker.LastHeartBeatTimestamp = DateTime.Now.AddDays(-2);
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+            workerPublicId = worker.WorkerPublicId;
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var rows = await repository.DeactivateExpiredWorkersAsync();
+
+        // Assert
+        Assert.That(rows, Is.EqualTo(1));
+
+
+        var savedWorker = await repository.GetByPublicIdAsync(workerPublicId);
+        Assert.That(savedWorker
+            , Is.Not.Null);
+        Assert.That(savedWorker!.Status, Is.EqualTo(WorkerStatusEnum.InActive));
+        Assert.That(savedWorker!.WorkerPublicId, Is.EqualTo(workerPublicId));
+    }
+
+    [Test]
+    public async Task DeactivateExpiredWorkers_WhenNoExpiredWorkers_ShouldNotModify()
+    {
+        // Arrange
+        var workerPublicId = Guid.Empty;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            worker.WorkerExpiresAtTimestamp = DateTime.Now.AddDays(1);
+            worker.LastHeartBeatTimestamp = DateTime.Now;
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+            workerPublicId = worker.WorkerPublicId;
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var rows = await repository.DeactivateExpiredWorkersAsync();
+
+        // Assert
+        Assert.That(rows, Is.EqualTo(0));
+
+        var savedWorker = await repository.GetByPublicIdAsync(workerPublicId);
+        Assert.That(savedWorker, Is.Not.Null);
+        Assert.That(savedWorker!.Status, Is.EqualTo(WorkerStatusEnum.Active));
+    }
+
+    [Test]
+    public async Task UnassignJobsForInactiveWorkers_WhenInactiveWorkerHasJobs_ShouldUnassignAndQueue()
+    {
+        // Arrange
+        var jobPublicId = Guid.Empty;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            worker.Status = WorkerStatusEnum.InActive;
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+            var workerId = worker.Id;
+
+            var job = TestData.Job(jobType);
+            job.AssignedWorkerId = workerId;
+            job.Status = JobStatusEnum.InProgress;
+            db.Add(job);
+            await db.SaveChangesAsync();
+            jobPublicId = job.JobPublicId;
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var workerRepo = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var rows = await repository.UnassignJobsForInactiveWorkersAsync();
+
+        // Assert
+        Assert.That(rows, Is.EqualTo(1));
+
+        var savedJob = await repository.GetByJobPublicIdAsync(jobPublicId);
+        Assert.That(savedJob, Is.Not.Null);
+        Assert.That(savedJob!.Status, Is.EqualTo(JobStatusEnum.Queued));
+        Assert.That(savedJob!.AssignedWorkerId, Is.Null);
+    }
+
+    [Test]
+    public async Task UnassignJobsForInactiveWorkers_WhenNoInactiveWorkers_ShouldNotModify()
+    {
+        // Arrange
+        var jobPublicId = Guid.Empty;
+        long workerId = 0;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+            workerId = worker.Id;
+
+            var job = TestData.Job(jobType);
+            job.AssignedWorkerId = workerId;
+            job.Status = JobStatusEnum.InProgress;
+            db.Add(job);
+            await db.SaveChangesAsync();
+            jobPublicId = job.JobPublicId;
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var rows = await repository.UnassignJobsForInactiveWorkersAsync();
+
+        // Assert
+        Assert.That(rows, Is.EqualTo(0));
+
+        var savedJob = await repository.GetByJobPublicIdAsync(jobPublicId);
+        Assert.That(savedJob, Is.Not.Null);
+        Assert.That(savedJob!.Status, Is.EqualTo(JobStatusEnum.InProgress));
+        Assert.That(savedJob!.AssignedWorkerId, Is.EqualTo(workerId));
     }
 }

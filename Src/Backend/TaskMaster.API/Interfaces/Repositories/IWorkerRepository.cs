@@ -8,5 +8,6 @@ namespace TaskMaster.API.Interfaces.Repositories
         Task<Worker?> GetByWorkerNameAsync(string workerName, bool withLock = false);
         Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds);
         Task<IEnumerable<Worker>> GetAllWorkersAsync();
+        Task<int> DeactivateExpiredWorkersAsync();
     }
 }

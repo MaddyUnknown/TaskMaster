@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
+using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Repositories;
 
 namespace TaskMaster.API.Repositories
@@ -48,6 +49,22 @@ namespace TaskMaster.API.Repositories
                     ModifyDateTime = {currentDateTime}
                 WHERE WorkerPublicId = {workerPublicId}
                 AND WorkerExpiresAtTimestamp > {currentDateTime}
+            ";
+
+            return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
+        }
+
+        public async Task<int> DeactivateExpiredWorkersAsync()
+        {
+            var currentDateTime = DateTime.Now;
+
+            FormattableString sql = $@"
+                UPDATE Workers
+                SET 
+                    Status = {(int)WorkerStatusEnum.InActive}, 
+                    ModifyDateTime = {currentDateTime}
+                WHERE Status = {(int)WorkerStatusEnum.Active}
+                AND WorkerExpiresAtTimestamp <= {currentDateTime};
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
