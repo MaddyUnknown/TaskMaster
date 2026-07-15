@@ -54,7 +54,7 @@ namespace TaskMaster.API.Repositories
                 (
                     SELECT TOP 1 j.*
                     FROM Workers w
-                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp <= {currentDateTime} AND Status = {WorkerStatusEnum.Active}
+                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp > {currentDateTime} AND Status = {WorkerStatusEnum.Active}
                     INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobTypeId = wc.JobTypeId
                     WHERE j.Status = {JobStatusEnum.Queued}
                     ORDER BY j.Id

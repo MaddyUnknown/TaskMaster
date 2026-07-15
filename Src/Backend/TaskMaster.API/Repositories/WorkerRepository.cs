@@ -47,7 +47,7 @@ namespace TaskMaster.API.Repositories
                     WorkerExpiresAtTimestamp = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)}, 
                     ModifyDateTime = {currentDateTime}
                 WHERE WorkerPublicId = {workerPublicId}
-                AND WorkerExpiresAtTimestamp <= {currentDateTime}
+                AND WorkerExpiresAtTimestamp > {currentDateTime}
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
