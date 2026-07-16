@@ -265,10 +265,7 @@ public class WorkerServiceTests
         // Arrange
         var worker = ServiceTestData.ActiveWorker();
 
-        _workerRepository.Setup(r => r.UpdateWorkerExpiryTimestampAsync(worker.WorkerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds))
-            .ReturnsAsync(1);
-
-        _workerRepository.Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
+        _workerRepository.Setup(r => r.UpdateWorkerExpiryAndReturnAsync(worker.WorkerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds))
             .ReturnsAsync(worker);
 
         // Act
@@ -277,7 +274,7 @@ public class WorkerServiceTests
         // Assert
         Assert.That(result.ActionStatus, Is.EqualTo(ActionStatusEnum.Ok));
 
-        _workerRepository.Verify(r => r.UpdateWorkerExpiryTimestampAsync(worker.WorkerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds), Times.Once);
+        _workerRepository.Verify(r => r.UpdateWorkerExpiryAndReturnAsync(worker.WorkerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds), Times.Once);
     }
 
     [Test]
@@ -285,7 +282,7 @@ public class WorkerServiceTests
     {
         // Arrange
         var workerPublicId = Guid.NewGuid();
-        _workerRepository.Setup(r => r.UpdateWorkerExpiryTimestampAsync(workerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds)).ReturnsAsync(0);
+        _workerRepository.Setup(r => r.UpdateWorkerExpiryAndReturnAsync(workerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds)).ReturnsAsync((Worker?)null);
 
         // Act
         var result = await CreateService().HeartBeatAsync(workerPublicId);
@@ -293,7 +290,7 @@ public class WorkerServiceTests
         // Assert
         Assert.That(result.ActionStatus, Is.EqualTo(ActionStatusEnum.Failed));
 
-        _workerRepository.Verify(r => r.UpdateWorkerExpiryTimestampAsync(workerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds), Times.Once);
+        _workerRepository.Verify(r => r.UpdateWorkerExpiryAndReturnAsync(workerPublicId, _workerOptions.Value.WorkerExpiryIntervalSeconds), Times.Once);
     }
 
     [Test]
@@ -301,7 +298,7 @@ public class WorkerServiceTests
     {
         // Act + Assert
         Assert.ThrowsAsync<ValidationException>(async () => await CreateService().HeartBeatAsync(Guid.Empty));
-        _workerRepository.Verify(r => r.UpdateWorkerExpiryTimestampAsync(It.IsAny<Guid>(), It.IsAny<int>()), Times.Never);
+        _workerRepository.Verify(r => r.UpdateWorkerExpiryAndReturnAsync(It.IsAny<Guid>(), It.IsAny<int>()), Times.Never);
     }
 
     [Test]

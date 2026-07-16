@@ -64,7 +64,7 @@ namespace TaskMaster.API.Repositories
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
         }
 
-        public async Task<Job?> GetNextJobForWorkerAsync(long workerId)
+        public async Task<Job?> GetNextJobForWorkerAsync(Guid workerPublicId)
         {
             var currentDateTime = DateTime.Now;
 
@@ -73,23 +73,24 @@ namespace TaskMaster.API.Repositories
                 (
                     SELECT TOP 1 j.*
                     FROM Workers w
-                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.Id = {workerId} AND WorkerExpiresAtTimestamp > {currentDateTime} AND Status = {WorkerStatusEnum.Active}
+                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.WorkerPublicId = {workerPublicId} AND WorkerExpiresAtTimestamp > {currentDateTime} AND Status = {WorkerStatusEnum.Active}
                     INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobTypeId = wc.JobTypeId
                     WHERE j.Status = {JobStatusEnum.Queued}
                     ORDER BY j.Id
                 )
                 UPDATE cte
-                SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = {workerId}, ModifyDateTime = {currentDateTime}
-                OUTPUT inserted.*;
-            ";
+                SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = (SELECT Id FROM Workers WHERE WorkerPublicId = {workerPublicId}), ModifyDateTime = {currentDateTime}
+                OUTPUT inserted.Id";
 
-            var jobs = await _context.Jobs.FromSqlInterpolated(sql).ToListAsync();
-            var job = jobs.FirstOrDefault();
+            var jobId = (await _context.Database.SqlQuery<long>(sql).ToListAsync()).FirstOrDefault();
 
-            if(job != null)
+            Job? job = null;
+            if (jobId > 0)
             {
-                await _context.Entry(job).Reference(j => j.JobType).LoadAsync();
-                await _context.Entry(job).Reference(j => j.AssignedWorker).LoadAsync();
+                job = await _context.Jobs
+                    .Include(j => j.JobType)
+                    .Include(j => j.AssignedWorker)
+                    .FirstOrDefaultAsync(j => j.Id == jobId);
             }
 
             return job;

@@ -130,28 +130,12 @@ namespace TaskMaster.API.Services
         {
             if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
 
-            await _unitOfWork.BeginTransactionAsync();
+            var worker = await _workerRepository.UpdateWorkerExpiryAndReturnAsync(workerId, _workerConfigOption.Value.WorkerExpiryIntervalSeconds);
 
-            try
+            return new HeartbeatActionStatus
             {
-                var rowsAffected = await _workerRepository.UpdateWorkerExpiryTimestampAsync(workerId, _workerConfigOption.Value.WorkerExpiryIntervalSeconds);
-                await _unitOfWork.SaveAsync();
-
-                Worker? worker = null;
-                if(rowsAffected != 0 ) worker = await _workerRepository.GetByPublicIdAsync(workerId);
-
-                await _unitOfWork.CommitTransactionAsync();
-
-                return new HeartbeatActionStatus
-                {
-                    ActionStatus = worker == null ? ActionStatusEnum.Failed : ActionStatusEnum.Ok
-                };
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
+                ActionStatus = worker == null ? ActionStatusEnum.Failed : ActionStatusEnum.Ok
+            };
         }
     }
 }

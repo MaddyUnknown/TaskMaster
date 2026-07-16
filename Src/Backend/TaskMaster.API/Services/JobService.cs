@@ -82,25 +82,8 @@ namespace TaskMaster.API.Services
         {
             if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
 
-            await _unitOfWork.BeginTransactionAsync();
-            
-            try
-            {
-                var worker = await _workerRepository.GetByPublicIdAsync(workerId);
-                if (worker == null) throw new NotFoundException(nameof(Worker), workerId);
-                if (worker.Status == WorkerStatusEnum.InActive) throw new WorkerInactiveException(workerId);
-
-
-                var jobEntity = await _jobRepository.GetNextJobForWorkerAsync(worker.Id);
-                await _unitOfWork.CommitTransactionAsync();
-                return jobEntity?.ToJobDetails();
-            }
-            catch
-            {
-                await _unitOfWork.RollbackTransactionAsync();
-                throw;
-            }
-            
+            var jobEntity = await _jobRepository.GetNextJobForWorkerAsync(workerId);
+            return jobEntity?.ToJobDetails();
         }
     }
 }

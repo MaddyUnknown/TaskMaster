@@ -203,12 +203,8 @@ public class JobServiceTests
         var worker = ServiceTestData.ActiveWorker(capabilities: [jobType]);
         var job = ServiceTestData.QueuedJob(jobType);
 
-        _workerRepository
-            .Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
-            .ReturnsAsync(worker);
-
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.Id))
+            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
             .Callback(() =>
             {
                 job.Status = JobStatusEnum.InProgress;
@@ -231,12 +227,8 @@ public class JobServiceTests
         // Arrange
         var worker = ServiceTestData.ActiveWorker();
 
-        _workerRepository
-            .Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
-            .ReturnsAsync(worker);
-
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.Id))
+            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
             .ReturnsAsync((Job?)null);
 
         // Act
@@ -245,27 +237,7 @@ public class JobServiceTests
         // Assert
         Assert.That(result, Is.Null);
 
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.Id), Times.Once);
-    }
-
-    [Test]
-    public void GetNextWorkerJobsAsync_WhenInactiveWorker_ShouldThrowException()
-    {
-        // Arrange
-        var worker = ServiceTestData.ActiveWorker();
-        worker.Status = WorkerStatusEnum.InActive;
-
-        _workerRepository
-            .Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
-            .ReturnsAsync(worker);
-        
-        // Act
-        var act = () => CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId);
-
-        // Assert
-        Assert.ThrowsAsync<WorkerInactiveException>(async () => await act());
-
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.Id), Times.Never);
+        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId), Times.Once);
     }
 
     [Test]
@@ -274,11 +246,8 @@ public class JobServiceTests
         // Arrange
         var worker = ServiceTestData.ActiveWorker();
 
-        _workerRepository
-            .Setup(r => r.GetByPublicIdAsync(worker.WorkerPublicId))
-            .ReturnsAsync(worker);
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.Id))
+            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
             .ReturnsAsync((Job?)null);
 
         // Act
@@ -287,7 +256,7 @@ public class JobServiceTests
         // Assert
         Assert.That(result, Is.Null);
 
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.Id), Times.Once);
+        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId), Times.Once);
     }
 
     [Test]
@@ -297,21 +266,6 @@ public class JobServiceTests
         var act = () => CreateService().GetNextWorkerJobsAsync(Guid.Empty);
         Assert.ThrowsAsync<ValidationException>(async () => await act());
         _workerRepository.Verify(r => r.GetByPublicIdAsync(It.IsAny<Guid>()), Times.Never);
-    }
-
-    [Test]
-    public void GetNextWorkerJobsAsync_WhenWorkerNotFound_ShouldThrowException()
-    {
-        // Arrange
-        var workerId = Guid.NewGuid();
-        _workerRepository
-            .Setup(r => r.GetByPublicIdAsync(workerId))
-            .ReturnsAsync((Worker?)null);
-
-        // Act + Assert
-        var act = () => CreateService().GetNextWorkerJobsAsync(workerId);
-        Assert.ThrowsAsync<NotFoundException>(async () => await act());
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(It.IsAny<long>()), Times.Never);
     }
 
     [Test]

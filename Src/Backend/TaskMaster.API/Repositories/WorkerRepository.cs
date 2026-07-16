@@ -37,7 +37,7 @@ namespace TaskMaster.API.Repositories
                 .FirstOrDefaultAsync();
         }
 
-        public async Task<int> UpdateWorkerExpiryTimestampAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
+        public async Task<Worker?> UpdateWorkerExpiryAndReturnAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
             var currentDateTime = DateTime.Now;
 
@@ -47,11 +47,13 @@ namespace TaskMaster.API.Repositories
                     LastHeartBeatTimestamp = {currentDateTime},
                     WorkerExpiresAtTimestamp = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)}, 
                     ModifyDateTime = {currentDateTime}
+                OUTPUT inserted.*
                 WHERE WorkerPublicId = {workerPublicId}
                 AND WorkerExpiresAtTimestamp > {currentDateTime}
             ";
 
-            return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
+            var workers = await _context.Workers.FromSqlInterpolated(sql).ToListAsync();
+            return workers.FirstOrDefault();
         }
 
         public async Task<int> DeactivateExpiredWorkersAsync()

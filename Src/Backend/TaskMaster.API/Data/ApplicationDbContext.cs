@@ -28,6 +28,11 @@ namespace TaskMaster.API.Data
                 .IsUnique();
 
             modelBuilder.Entity<Job>()
+                .HasIndex(j => new { j.JobTypeId, j.Status })
+                .HasDatabaseName("IX_Jobs_JobTypeId_Status")
+                .IncludeProperties(j => j.Id);
+
+            modelBuilder.Entity<Job>()
                 .HasOne(j => j.JobType)
                 .WithMany()
                 .HasForeignKey(j => j.JobTypeId)
@@ -51,6 +56,11 @@ namespace TaskMaster.API.Data
             modelBuilder.Entity<Worker>()
                 .HasIndex(w => new { w.WorkerPublicId })
                 .IsUnique();
+
+            modelBuilder.Entity<Worker>()
+                .HasIndex(w => new { w.Status, w.WorkerExpiresAtTimestamp })
+                .HasDatabaseName("IX_Workers_Status_WorkerExpiresAtTimestamp")
+                .IncludeProperties(w => w.Id);
 
             modelBuilder.Entity<Worker>()
                 .Property(w => w.WorkerExpiresAtTimestamp)

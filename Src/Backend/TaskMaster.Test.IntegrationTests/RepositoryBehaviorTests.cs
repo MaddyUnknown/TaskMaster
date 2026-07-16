@@ -90,7 +90,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         await Task.Delay(TimeSpan.FromSeconds(1));
 
         // Act
-        var rows = await repository.UpdateWorkerExpiryTimestampAsync(workerId, workerExpiryInterval);
+        var worker = await repository.UpdateWorkerExpiryAndReturnAsync(workerId, workerExpiryInterval);
 
         // Assert
         var newWorkerExpiresAtTimestamp = await ExecuteDbAsync(async db =>
@@ -99,7 +99,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
             return (DateTime?)db.Entry(entity).Property("WorkerExpiresAtTimestamp").CurrentValue;
         });
 
-        Assert.That(rows, Is.EqualTo(1));
+        Assert.That(worker, Is.Not.Null);
         Assert.That(workerExpiresAtTimestamp, Is.Not.Null);
         Assert.That(newWorkerExpiresAtTimestamp, Is.Not.Null);
         Assert.That(newWorkerExpiresAtTimestamp.Value, Is.GreaterThan(workerExpiresAtTimestamp!.Value));
