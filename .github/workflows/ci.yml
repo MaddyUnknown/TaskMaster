@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [develop]
+  pull_request:
+    branches: [develop]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_TEST_SA_PASSWORD }}
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P '${{ secrets.CI_TEST_SA_PASSWORD }}' -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P '${{ secrets.CI_TEST_SA_PASSWORD }}' -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: Src/Frontend/TaskMaster.UI/package-lock.json
+
+      - name: Restore & Build Backend
+        run: dotnet build Src/Backend/TaskMaster.sln
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: Src/Frontend/TaskMaster.UI
+
+      - name: Build Frontend
+        run: npm run build
+        working-directory: Src/Frontend/TaskMaster.UI
+
+      - name: Run Unit Tests
+        run: dotnet test Src/Backend/TaskMaster.Test.UnitTests --no-build --verbosity normal
+
+      - name: Run Integration Tests
+        env:
+          ConnectionStrings__IntegrationTesting: Server=localhost;Database=TaskMaster_IntegrationTesting;User Id=sa;Password=${{ secrets.CI_TEST_SA_PASSWORD }};TrustServerCertificate=True;
+        run: dotnet test Src/Backend/TaskMaster.Test.IntegrationTests --no-build --verbosity normal
