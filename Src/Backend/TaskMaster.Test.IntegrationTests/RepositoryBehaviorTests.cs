@@ -102,7 +102,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         Assert.That(worker, Is.Not.Null);
         Assert.That(workerExpiresAtTimestamp, Is.Not.Null);
         Assert.That(newWorkerExpiresAtTimestamp, Is.Not.Null);
-        Assert.That(newWorkerExpiresAtTimestamp.Value, Is.GreaterThan(workerExpiresAtTimestamp!.Value));
+        Assert.That(newWorkerExpiresAtTimestamp!.Value, Is.GreaterThan(workerExpiresAtTimestamp!.Value));
     }
 
     [Test]
