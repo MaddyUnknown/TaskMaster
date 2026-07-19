@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
 using TaskMaster.Library.Common.Models.Workers;
 using TaskMaster.Library.Consumer.Configs;
@@ -156,7 +157,7 @@ namespace TaskMaster.Library.Consumer.Workers
                 while (await timer.WaitForNextTickAsync(_heartBeatCancelToken.Token))
                 {
                     var result = await _httpClient.WorkerHeartBeat(_workerDetails.WorkerId);
-                    if (result.ActionStatus != "Ok") throw new InvalidOperationException(ErrorMessage.HeartbeatFailed());
+                    if (result.ActionStatus != EnumConstants.ActionStatusEnum.Ok) throw new InvalidOperationException(ErrorMessage.HeartbeatFailed());
                 }
             });
         }
