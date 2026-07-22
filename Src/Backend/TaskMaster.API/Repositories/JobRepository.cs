@@ -26,10 +26,10 @@ namespace TaskMaster.API.Repositories
 
         public async Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId)
         {
-            var workerId = await _context.Workers.Where(w => w.WorkerPublicId == workerPublicId).Select(w => w.Id).FirstOrDefaultAsync();
-            if (workerId == 0) return null;
-
-            return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).Where(j => j.JobPublicId == jobPublicId && j.AssignedWorkerId == workerId).FirstOrDefaultAsync();
+            return await _context.Jobs
+                .Include(j => j.JobType)
+                .Where(j => j.JobPublicId == jobPublicId && j.AssignedWorker!.WorkerPublicId == workerPublicId)
+                .FirstOrDefaultAsync();
         }
 
         public async Task<int> UnassignJobForWorkerIdAsync(long workerId)
@@ -39,7 +39,8 @@ namespace TaskMaster.API.Repositories
                     Status = {(int)JobStatusEnum.Queued},
                     AssignedWorkerId = NULL,
                     ModifyDateTime = {DateTime.Now}
-                WHERE AssignedWorkerId = {workerId};
+                WHERE AssignedWorkerId = {workerId}
+                AND Status = {(int)JobStatusEnum.InProgress};
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
@@ -69,31 +70,85 @@ namespace TaskMaster.API.Repositories
             var currentDateTime = DateTime.Now;
 
             FormattableString sql = $@"
+                DECLARE @jobId TABLE (Id bigint NOT NULL);
+
                 WITH cte AS
                 (
                     SELECT TOP 1 j.*
                     FROM Workers w
-                    INNER JOIN WorkerCapabilities wc ON wc.WorkerId = w.Id AND w.WorkerPublicId = {workerPublicId} AND WorkerExpiresAtTimestamp > {currentDateTime} AND Status = {WorkerStatusEnum.Active}
-                    INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) ON j.JobTypeId = wc.JobTypeId
-                    WHERE j.Status = {JobStatusEnum.Queued}
+                    INNER JOIN WorkerCapabilities wc 
+                        ON wc.WorkerId = w.Id 
+                        AND w.WorkerPublicId = {workerPublicId} 
+                        AND WorkerExpiresAtTimestamp > {currentDateTime} 
+                        AND Status = {(int)WorkerStatusEnum.Active}
+                    INNER JOIN Jobs j WITH (UPDLOCK, READPAST, ROWLOCK) 
+                        ON j.JobTypeId = wc.JobTypeId
+                    WHERE j.Status = {(int)JobStatusEnum.Queued}
                     ORDER BY j.Id
                 )
                 UPDATE cte
-                SET Status = {JobStatusEnum.InProgress}, AssignedWorkerId = (SELECT Id FROM Workers WHERE WorkerPublicId = {workerPublicId}), ModifyDateTime = {currentDateTime}
-                OUTPUT inserted.Id";
+                SET 
+                    Status = {(int)JobStatusEnum.InProgress}, 
+                    AssignedWorkerId = (SELECT Id FROM Workers WHERE WorkerPublicId = {workerPublicId}), 
+                    ModifyDateTime = {currentDateTime}
+                OUTPUT INSERTED.Id INTO @jobId;
 
-            var jobId = (await _context.Database.SqlQuery<long>(sql).ToListAsync()).FirstOrDefault();
+                SELECT j.Id, j.JobPublicId, j.Payload, j.[Status], j.JobTypeId, j.AssignedWorkerId,
+                       j.CreatedDateTime, j.ModifyDateTime,
+                       jt.Id AS JobType_Id, jt.Name AS JobType_Name, jt.Version AS JobType_Version,
+                       jt.[Schema] AS JobType_Schema, jt.Description AS JobType_Description,
+                       jt.CreatedDateTime AS JobType_CreatedDateTime, jt.ModifyDateTime AS JobType_ModifyDateTime
+                FROM Jobs j
+                INNER JOIN JobTypes jt ON jt.Id = j.JobTypeId
+                WHERE j.Id IN (SELECT Id FROM @jobId);
+            ";
 
-            Job? job = null;
-            if (jobId > 0)
+            var result = await _context.Database.SqlQuery<JobPullDto>(sql).ToListAsync();
+
+            var dto = result.FirstOrDefault();
+            if (dto == null) return null;
+
+            return new Job
             {
-                job = await _context.Jobs
-                    .Include(j => j.JobType)
-                    .Include(j => j.AssignedWorker)
-                    .FirstOrDefaultAsync(j => j.Id == jobId);
-            }
+                Id = dto.Id,
+                JobPublicId = dto.JobPublicId,
+                Payload = dto.Payload,
+                Status = dto.Status,
+                JobTypeId = dto.JobTypeId,
+                AssignedWorkerId = dto.AssignedWorkerId,
+                CreatedDateTime = dto.CreatedDateTime,
+                ModifyDateTime = dto.ModifyDateTime,
+                JobType = new JobType
+                {
+                    Id = dto.JobType_Id,
+                    Name = dto.JobType_Name,
+                    Version = dto.JobType_Version,
+                    Schema = dto.JobType_Schema,
+                    Description = dto.JobType_Description,
+                    CreatedDateTime = dto.JobType_CreatedDateTime,
+                    ModifyDateTime = dto.JobType_ModifyDateTime
+                }
+            };
+        }
 
-            return job;
+        private sealed class JobPullDto
+        {
+            public long Id { get; set; }
+            public Guid JobPublicId { get; set; }
+            public string? Payload { get; set; }
+            public JobStatusEnum Status { get; set; }
+            public long JobTypeId { get; set; }
+            public long? AssignedWorkerId { get; set; }
+            public DateTime CreatedDateTime { get; set; }
+            public DateTime? ModifyDateTime { get; set; }
+
+            public long JobType_Id { get; set; }
+            public string JobType_Name { get; set; } = string.Empty;
+            public long JobType_Version { get; set; }
+            public string JobType_Schema { get; set; } = string.Empty;
+            public string? JobType_Description { get; set; }
+            public DateTime JobType_CreatedDateTime { get; set; }
+            public DateTime? JobType_ModifyDateTime { get; set; }
         }
     }
 }
