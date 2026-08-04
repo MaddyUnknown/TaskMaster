@@ -55,6 +55,7 @@ namespace TaskMaster.API
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+                options.EnableDetailedErrors();
             });
 
 

@@ -3,6 +3,7 @@ using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Jobs;
 
 namespace TaskMaster.API.Repositories
 {
@@ -65,16 +66,16 @@ namespace TaskMaster.API.Repositories
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
         }
 
-        public async Task<Job?> GetNextJobForWorkerAsync(Guid workerPublicId)
+        public async Task<List<Job>> GetNextJobsForWorkerAsync(Guid workerPublicId, int maxJobs)
         {
             var currentDateTime = DateTime.Now;
 
             FormattableString sql = $@"
-                DECLARE @jobId TABLE (Id bigint NOT NULL);
+                DECLARE @jobIds TABLE (Id bigint NOT NULL);
 
                 WITH cte AS
                 (
-                    SELECT TOP 1 j.*
+                    SELECT TOP ({maxJobs}) j.*
                     FROM Workers w
                     INNER JOIN WorkerCapabilities wc 
                         ON wc.WorkerId = w.Id 
@@ -91,7 +92,7 @@ namespace TaskMaster.API.Repositories
                     Status = {(int)JobStatusEnum.InProgress}, 
                     AssignedWorkerId = (SELECT Id FROM Workers WHERE WorkerPublicId = {workerPublicId}), 
                     ModifyDateTime = {currentDateTime}
-                OUTPUT INSERTED.Id INTO @jobId;
+                OUTPUT INSERTED.Id INTO @jobIds;
 
                 SELECT j.Id, j.JobPublicId, j.Payload, j.[Status], j.JobTypeId, j.AssignedWorkerId,
                        j.CreatedDateTime, j.ModifyDateTime,
@@ -100,15 +101,12 @@ namespace TaskMaster.API.Repositories
                        jt.CreatedDateTime AS JobType_CreatedDateTime, jt.ModifyDateTime AS JobType_ModifyDateTime
                 FROM Jobs j
                 INNER JOIN JobTypes jt ON jt.Id = j.JobTypeId
-                WHERE j.Id IN (SELECT Id FROM @jobId);
+                WHERE j.Id IN (SELECT Id FROM @jobIds);
             ";
 
             var result = await _context.Database.SqlQuery<JobPullDto>(sql).ToListAsync();
 
-            var dto = result.FirstOrDefault();
-            if (dto == null) return null;
-
-            return new Job
+            return result.Select(dto => new Job
             {
                 Id = dto.Id,
                 JobPublicId = dto.JobPublicId,
@@ -128,7 +126,30 @@ namespace TaskMaster.API.Repositories
                     CreatedDateTime = dto.JobType_CreatedDateTime,
                     ModifyDateTime = dto.JobType_ModifyDateTime
                 }
-            };
+            }).ToList();
+        }
+
+        public async Task<int> UpdateJobStatusAsync(BulkUpdateJobStatus request)
+        {
+            var worker = await _context.Workers.FirstOrDefaultAsync(w => w.WorkerPublicId == request.WorkerId);
+            if (worker == null) return 0;
+
+            var count = 0;
+            var now = DateTime.Now;
+
+            foreach (var item in request.JobStatuses)
+            {
+                var job = await _context.Jobs.FirstOrDefaultAsync(j => j.JobPublicId == item.JobId && j.AssignedWorkerId == worker.Id);
+                if (job == null) continue;
+
+                job.Status = item.Status;
+
+                job.ModifyDateTime = now;
+                count++;
+            }
+
+            await _context.SaveChangesAsync();
+            return count;
         }
 
         private sealed class JobPullDto

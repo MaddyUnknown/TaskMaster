@@ -54,10 +54,10 @@ internal static class ServiceTestData
         WorkerCapabilities = capabilities == null ? [] : capabilities.Select(c => new WorkerCapability { WorkerId = id, JobTypeId = c.Id, JobType = c }).ToList()
     };
 
-    public static Job QueuedJob(JobType? jobType = null, long id = 501) => new()
+    public static Job QueuedJob(JobType? jobType = null, long id = 501, Guid? jobPublicId = null) => new()
     {
         Id = id,
-        JobPublicId = Guid.NewGuid(),
+        JobPublicId = jobPublicId ?? Guid.NewGuid(),
         JobType = jobType ?? EmailJobType(),
         JobTypeId = jobType?.Id ?? 11,
         Payload = "{\"id\":1}",

@@ -75,6 +75,15 @@ namespace TaskMaster.Library.Common.HttpClients
             return wrapper.Data;
         }
 
+        public async Task<IEnumerable<JobDetails>> PullJobs(Guid workerId, int maxJobs)
+        {
+            EnsureBaseAddress();
+            var endpoint = ApiEndpoint.PullJobs(workerId, maxJobs);
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsync(endpoint, null));
+            var wrapper = await EnsureSuccessAsync<IEnumerable<JobDetails>>(response);
+            return wrapper.Data!;
+        }
+
         public async Task<JobDetails> CompleteJob(Guid jobId, Guid workerId)
         {
             EnsureBaseAddress();
@@ -90,6 +99,15 @@ namespace TaskMaster.Library.Common.HttpClients
             var endpoint = ApiEndpoint.FailJob(jobId);
             var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
             var wrapper = await EnsureSuccessAsync<JobDetails>(response);
+            return wrapper.Data!;
+        }
+
+        public async Task<BulkUpdateJobStatusResponse> BulkUpdateJobStatus(BulkUpdateJobStatusRequest request)
+        {
+            EnsureBaseAddress();
+            var endpoint = ApiEndpoint.BatchUpdateJobStatus;
+            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, request));
+            var wrapper = await EnsureSuccessAsync<BulkUpdateJobStatusResponse>(response);
             return wrapper.Data!;
         }
 

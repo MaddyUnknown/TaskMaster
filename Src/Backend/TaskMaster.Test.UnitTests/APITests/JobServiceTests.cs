@@ -9,6 +9,7 @@ using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Services;
+using TaskMaster.Library.Consumer.Interfaces;
 using TaskMaster.Test.UnitTests.Data;
 
 namespace TaskMaster.Test.UnitTests.APITests;
@@ -196,6 +197,52 @@ public class JobServiceTests
     }
 
     [Test]
+    public async Task ChangeJobStatusAsync_Bulk_WhenValidRequest_ShouldReturnUpdatedCount()
+    {
+        // Arrange
+        var workerId = Guid.NewGuid();
+        var request = new BulkUpdateJobStatus
+        {
+            WorkerId = workerId,
+            JobStatuses =
+            [
+                new UpdateJobStatus { JobId = Guid.NewGuid(), Status = JobStatusEnum.Completed },
+                new UpdateJobStatus { JobId = Guid.NewGuid(), Status = JobStatusEnum.Failed }
+            ]
+        };
+
+        var jobType = ServiceTestData.EmailJobType();
+
+        _jobRepository
+            .Setup(r => r.GetByJobPublicIdAndWorkerPublicIdAsync(It.Is<Guid>(j => request.JobStatuses.Any(d => d.JobId == j)), request.WorkerId))
+            .ReturnsAsync((Guid jobPublicId, Guid workerPublicId) => {
+                var job = ServiceTestData.QueuedJob(jobType, jobPublicId: jobPublicId);
+                job.Status = JobStatusEnum.InProgress;
+                return job;
+            });
+
+        _jobCrudRepository
+            .Setup(r => r.Update(It.Is<Job>(j => request.JobStatuses.Any(d => d.JobId == j.JobPublicId))));
+
+        // Act
+        var result = await CreateService().ChangeJobStatusAsync(request);
+
+        // Assert
+        Assert.That(result.UpdatedRecordCount, Is.EqualTo(2));
+        _jobCrudRepository.Verify(r => r.Update(It.Is<Job>(j => request.JobStatuses.Any(d => d.JobId == j.JobPublicId))), Times.Exactly(request.JobStatuses.Count));
+    }
+
+    [Test]
+    public void ChangeJobStatusAsync_Bulk_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        var act = () => CreateService().ChangeJobStatusAsync(new BulkUpdateJobStatus { WorkerId = Guid.Empty });
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+        _jobCrudRepository.Verify(r => r.Update(It.IsAny<Job>()), Times.Never);
+    }
+
+
+    [Test]
     public async Task GetNextWorkerJobsAsync_WhenQueuedJob_ShouldAssignJob()
     {
         // Arrange
@@ -204,13 +251,13 @@ public class JobServiceTests
         var job = ServiceTestData.QueuedJob(jobType);
 
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
+            .Setup(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 1))
             .Callback(() =>
             {
                 job.Status = JobStatusEnum.InProgress;
                 job.AssignedWorkerId = worker.Id;
             })
-            .ReturnsAsync(job);
+            .ReturnsAsync([job]);
 
         // Act
         var result = await CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId);
@@ -228,8 +275,8 @@ public class JobServiceTests
         var worker = ServiceTestData.ActiveWorker();
 
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
-            .ReturnsAsync((Job?)null);
+            .Setup(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 1))
+            .ReturnsAsync([]);
 
         // Act
         var result = await CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId);
@@ -237,7 +284,7 @@ public class JobServiceTests
         // Assert
         Assert.That(result, Is.Null);
 
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId), Times.Once);
+        _jobRepository.Verify(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 1), Times.Once);
     }
 
     [Test]
@@ -247,8 +294,8 @@ public class JobServiceTests
         var worker = ServiceTestData.ActiveWorker();
 
         _jobRepository
-            .Setup(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId))
-            .ReturnsAsync((Job?)null);
+            .Setup(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 1))
+            .ReturnsAsync([]);
 
         // Act
         var result = await CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId);
@@ -256,7 +303,7 @@ public class JobServiceTests
         // Assert
         Assert.That(result, Is.Null);
 
-        _jobRepository.Verify(r => r.GetNextJobForWorkerAsync(worker.WorkerPublicId), Times.Once);
+        _jobRepository.Verify(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 1), Times.Once);
     }
 
     [Test]
@@ -266,6 +313,53 @@ public class JobServiceTests
         var act = () => CreateService().GetNextWorkerJobsAsync(Guid.Empty);
         Assert.ThrowsAsync<ValidationException>(async () => await act());
         _workerRepository.Verify(r => r.GetByPublicIdAsync(It.IsAny<Guid>()), Times.Never);
+    }
+
+    [Test]
+    public async Task GetNextJobsAsync_WhenQueuedJobs_ShouldReturnJobs()
+    {
+        // Arrange
+        var jobType = ServiceTestData.EmailJobType();
+        var worker = ServiceTestData.ActiveWorker(capabilities: [jobType]);
+        var jobs = new[] { ServiceTestData.QueuedJob(jobType), ServiceTestData.QueuedJob(jobType) };
+
+        _jobRepository
+            .Setup(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 3))
+            .ReturnsAsync(jobs.ToList());
+
+        // Act
+        var result = await CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId, 3);
+
+        // Assert
+        Assert.That(result, Has.Exactly(2).Items);
+    }
+
+    [Test]
+    public async Task GetNextJobsAsync_WhenNoQueuedJobs_ShouldReturnEmptyList()
+    {
+        // Arrange
+        var worker = ServiceTestData.ActiveWorker();
+
+        _jobRepository
+            .Setup(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 5))
+            .ReturnsAsync([]);
+
+        // Act
+        var result = await CreateService().GetNextWorkerJobsAsync(worker.WorkerPublicId, 5);
+
+        // Assert
+        Assert.That(result, Is.Empty);
+
+        _jobRepository.Verify(r => r.GetNextJobsForWorkerAsync(worker.WorkerPublicId, 5), Times.Once);
+    }
+
+    [Test]
+    public void GetNextJobsAsync_WhenEmptyWorkerId_ShouldThrowException()
+    {
+        // Act + Assert
+        var act = () => CreateService().GetNextWorkerJobsAsync(Guid.Empty, 5);
+        Assert.ThrowsAsync<ValidationException>(async () => await act());
+        _jobRepository.Verify(r => r.GetNextJobsForWorkerAsync(It.IsAny<Guid>(), It.IsAny<int>()), Times.Never);
     }
 
     [Test]

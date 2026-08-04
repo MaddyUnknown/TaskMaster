@@ -12,7 +12,7 @@ var services = new ServiceCollection();
 services.AddTaskMasterConsumer(opts =>
 {
     opts.ApiBaseUrl = apiBaseUrl;
-    opts.PollingWaitIntervalMs = 500;
+    opts.MaxConcurrentHandlers = 20;
 });
 await using var serviceProvider = services.BuildServiceProvider();
 

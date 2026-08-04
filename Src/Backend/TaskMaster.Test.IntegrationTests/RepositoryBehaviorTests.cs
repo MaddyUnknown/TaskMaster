@@ -5,6 +5,7 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Jobs;
 using TaskMaster.Test.IntegrationTests.Abstracts;
 using TaskMaster.Test.IntegrationTests.Data;
 
@@ -542,5 +543,59 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         Assert.That(savedJob, Is.Not.Null);
         Assert.That(savedJob!.Status, Is.EqualTo(JobStatusEnum.InProgress));
         Assert.That(savedJob!.AssignedWorkerId, Is.EqualTo(workerId));
+    }
+
+    [Test]
+    public async Task GetNextJobsForWorkerAsync_WhenMaxJobs3And5Jobs_ShouldReturn3()
+    {
+        // Arrange
+        var workerPublicId = Guid.Empty;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            db.Add(jobType);
+            db.Add(worker);
+            await db.SaveChangesAsync();
+            workerPublicId = worker.WorkerPublicId;
+
+            db.AddRange(
+                TestData.Job(jobType), TestData.Job(jobType), TestData.Job(jobType),
+                TestData.Job(jobType), TestData.Job(jobType));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var jobs = await repository.GetNextJobsForWorkerAsync(workerPublicId, 3);
+
+        // Assert
+        Assert.That(jobs, Has.Count.EqualTo(3));
+    }
+
+    [Test]
+    public async Task GetNextJobsForWorkerAsync_WhenNoQueuedJobs_ShouldReturnEmptyList()
+    {
+        // Arrange
+        var workerPublicId = Guid.Empty;
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var worker = TestData.Worker("worker-a", [jobType]);
+            db.AddRange(jobType, worker);
+            await db.SaveChangesAsync();
+            workerPublicId = worker.WorkerPublicId;
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var jobs = await repository.GetNextJobsForWorkerAsync(workerPublicId, 5);
+
+        // Assert
+        Assert.That(jobs, Is.Empty);
     }
 }

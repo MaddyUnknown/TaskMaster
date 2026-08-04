@@ -4,7 +4,7 @@ namespace TaskMaster.Sample.Consumer;
 
 public class SampleHandler : IJobHandler<SamplePayload>
 {
-    public Task HandleAsync(SamplePayload payload, CancellationToken cancellationToken)
+    public Task HandleAsync(SamplePayload payload)
     {
         var delay = DateTime.Now - payload.ProducedAt;
         Console.WriteLine(

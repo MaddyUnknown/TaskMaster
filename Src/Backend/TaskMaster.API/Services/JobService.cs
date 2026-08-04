@@ -1,4 +1,5 @@
-﻿using TaskMaster.API.Constants;
+﻿using Microsoft.EntityFrameworkCore;
+using TaskMaster.API.Constants;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
@@ -65,6 +66,32 @@ namespace TaskMaster.API.Services
             return jobEntity.ToJobDetails();
         }
 
+        public async Task<BulkUpdateJobStatusResponse> ChangeJobStatusAsync(BulkUpdateJobStatus request)
+        {
+            if (request.WorkerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+
+            var updatedRecord = 0;
+            var errorMessages = new List<UpdateJobStatusErrorResponse>();
+
+            foreach(var item in request.JobStatuses)
+            {
+                var job = await _jobRepository.GetByJobPublicIdAndWorkerPublicIdAsync(item.JobId, request.WorkerId);
+                if (job == null)
+                {
+                    errorMessages.Add(new UpdateJobStatusErrorResponse { JobId = item.JobId, ErrorReason = ErrorMessage.JobNotFound() });
+                    continue;
+                }
+
+                job.Status = item.Status;
+                _jobCRUDRepository.Update(job);
+                updatedRecord++;
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            return new BulkUpdateJobStatusResponse { UpdatedRecordCount = updatedRecord, Errors = errorMessages };
+        }
+
         public async Task<IEnumerable<JobDetails>> GetAllJobsAsync()
         {
             var jobs = await _jobRepository.GetAllJobsAsync();
@@ -82,8 +109,17 @@ namespace TaskMaster.API.Services
         {
             if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
 
-            var jobEntity = await _jobRepository.GetNextJobForWorkerAsync(workerId);
-            return jobEntity?.ToJobDetails();
+            var jobs = await _jobRepository.GetNextJobsForWorkerAsync(workerId, 1);
+            return jobs.FirstOrDefault()?.ToJobDetails();
+        }
+
+        public async Task<IEnumerable<JobDetails>> GetNextWorkerJobsAsync(Guid workerId, int maxJobs)
+        {
+            if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
+
+            var jobs = await _jobRepository.GetNextJobsForWorkerAsync(workerId, maxJobs);
+
+            return jobs.Select(j => j.ToJobDetails()).ToList();
         }
     }
 }

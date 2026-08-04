@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Moq;
+using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.JobType;
@@ -25,7 +26,10 @@ public class TaskWorkerTests
         _httpClient = new(MockBehavior.Strict);
         _options = Options.Create(new TaskMasterConsumerOptions
         {
-            PollingWaitIntervalMs = 10
+            PollingWaitIntervalMs = 10,
+            MaxConcurrentHandlers = 1,
+            ResultFlushIntervalMs = 10,
+            MaxResultRetries = 0
         });
     }
 
@@ -66,11 +70,24 @@ public class TaskWorkerTests
             .ReturnsAsync(new WorkerDetails());
     }
 
-    private void SetupPullJob(JobDetails? job)
+    private void SetupPullJobsBatch(Guid workerId, JobDetails? singleJob, int remainingCount = 0)
+    {
+        IEnumerable<JobDetails> response = singleJob != null ? [singleJob] : Enumerable.Empty<JobDetails>();
+
+        _httpClient
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync(response);
+    }
+
+    private void SetupSubmitBatchResult()
     {
         _httpClient
-            .Setup(c => c.PullJob(It.IsAny<Guid>()))
-            .ReturnsAsync(job);
+            .Setup(c => c.BulkUpdateJobStatus(It.IsAny<BulkUpdateJobStatusRequest>()))
+            .ReturnsAsync(new BulkUpdateJobStatusResponse
+            {
+                UpdatedRecordCount = 1,
+                Errors = Enumerable.Empty<UpdateJobStatusErrorResponse>()
+            });
     }
 
     private (TaskWorkerFactory Factory, IWorker Worker) CreateWorker(
@@ -141,15 +158,14 @@ public class TaskWorkerTests
             .ReturnsAsync(new WorkerDetails());
 
         _httpClient
-            .Setup(c => c.PullJob(It.IsAny<Guid>()))
-            .ReturnsAsync((JobDetails?)null);
+            .Setup(c => c.PullJobs(It.IsAny<Guid>(), It.IsAny<int>()))
+            .ReturnsAsync(Enumerable.Empty<JobDetails>());
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
         Assert.That(capturedRegistration, Is.Not.Null);
@@ -184,32 +200,23 @@ public class TaskWorkerTests
         var workerId = Guid.NewGuid();
 
         SetupWorkerRegistration(workerId);
-
-        var pullCount = 0;
-        _httpClient
-            .Setup(c => c.PullJob(workerId))
-            .ReturnsAsync(() =>
-            {
-                pullCount++;
-                if (pullCount == 1)
-                    return new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
-                return null;
-            });
-
-        _httpClient
-            .Setup(c => c.CompleteJob(jobId, workerId))
-            .ReturnsAsync(new JobDetails());
+        SetupPullJobsBatch(workerId, new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "queued" });
+        SetupSubmitBatchResult();
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
-        _httpClient.Verify(c => c.CompleteJob(jobId, workerId), Times.Once);
-        _httpClient.Verify(c => c.FailJob(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+        _httpClient.Verify(c => c.BulkUpdateJobStatus(
+            It.Is<BulkUpdateJobStatusRequest>(r =>
+                r.WorkerId == workerId &&
+                r.JobStatuses.Count == 1 &&
+                r.JobStatuses[0].JobId == jobId &&
+                r.JobStatuses[0].Status == "completed")),
+            Times.AtLeastOnce);
     }
 
     [Test]
@@ -221,16 +228,14 @@ public class TaskWorkerTests
         var workerId = Guid.NewGuid();
 
         SetupWorkerRegistration(workerId);
-        SetupPullJob(new JobDetails
+        SetupPullJobsBatch(workerId, new JobDetails
         {
             JobId = jobId,
             JobType = jobType,
             Payload = """{"Email":"hello","Priority":42}""",
             Status = "Queued"
         });
-        _httpClient
-            .Setup(c => c.CompleteJob(jobId, workerId))
-            .ReturnsAsync(new JobDetails());
+        SetupSubmitBatchResult();
 
         var handler = new EmailCapturingHandler();
         var factory = new TaskWorkerFactory(BuildServiceProviderWithHandler(handler));
@@ -239,7 +244,6 @@ public class TaskWorkerTests
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
         Assert.That(handler.ReceivedPayload, Is.Not.Null);
@@ -259,32 +263,23 @@ public class TaskWorkerTests
         var workerId = Guid.NewGuid();
 
         SetupWorkerRegistration(workerId);
-
-        var pullCount = 0;
-        _httpClient
-            .Setup(c => c.PullJob(workerId))
-            .ReturnsAsync(() =>
-            {
-                pullCount++;
-                if (pullCount == 1)
-                    return new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
-                return null;
-            });
-
-        _httpClient
-            .Setup(c => c.FailJob(jobId, workerId))
-            .ReturnsAsync(new JobDetails());
+        SetupPullJobsBatch(workerId, new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" });
+        SetupSubmitBatchResult();
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailFailingHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
-        _httpClient.Verify(c => c.FailJob(jobId, workerId), Times.Once);
-        _httpClient.Verify(c => c.CompleteJob(It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+        _httpClient.Verify(c => c.BulkUpdateJobStatus(
+            It.Is<BulkUpdateJobStatusRequest>(r =>
+                r.WorkerId == workerId &&
+                r.JobStatuses.Count == 1 &&
+                r.JobStatuses[0].JobId == jobId &&
+                r.JobStatuses[0].Status == "failed")),
+            Times.AtLeastOnce);
     }
 
     [Test]
@@ -299,29 +294,34 @@ public class TaskWorkerTests
 
         var callCount = 0;
         _httpClient
-            .Setup(c => c.PullJob(workerId))
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
             .ReturnsAsync(() =>
             {
                 callCount++;
                 return callCount == 1
-                    ? null
-                    : new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" };
+                    ? Enumerable.Empty<JobDetails>()
+                    : [new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" }];
             });
 
         _httpClient
-            .Setup(c => c.CompleteJob(jobId, workerId))
-            .ReturnsAsync(new JobDetails());
+            .Setup(c => c.BulkUpdateJobStatus(It.IsAny<BulkUpdateJobStatusRequest>()))
+            .ReturnsAsync(new BulkUpdateJobStatusResponse
+            {
+                UpdatedRecordCount = 1,
+                Errors = Enumerable.Empty<UpdateJobStatusErrorResponse>()
+            });
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
         Assert.That(callCount, Is.GreaterThanOrEqualTo(2));
-        _httpClient.Verify(c => c.CompleteJob(jobId, workerId), Times.AtLeastOnce);
+        _httpClient.Verify(c => c.BulkUpdateJobStatus(
+            It.Is<BulkUpdateJobStatusRequest>(r => r.JobStatuses.Count == 1 && r.JobStatuses[0].Status == "completed")),
+            Times.AtLeastOnce);
     }
 
     [Test]
@@ -333,22 +333,21 @@ public class TaskWorkerTests
         SetupWorkerRegistration(workerId);
 
         _httpClient
-            .Setup(c => c.PullJob(workerId))
-            .ReturnsAsync((JobDetails?)null);
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync(Enumerable.Empty<JobDetails>());
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
-        _httpClient.Verify(c => c.PullJob(workerId), Times.AtLeast(2));
+        _httpClient.Verify(c => c.PullJobs(workerId, It.IsAny<int>()), Times.AtLeast(2));
     }
 
     [Test]
-    public async Task RunAsync_WhenJobTypeNotInHandlerMap_ShouldThrow()
+    public async Task RunAsync_WhenJobTypeNotInHandlerMap_ShouldFailJob()
     {
         // Arrange
         var jobType = new JobTypeRef { Name = "unknown-type", Version = 99 };
@@ -357,21 +356,153 @@ public class TaskWorkerTests
         SetupWorkerRegistration(workerId);
 
         _httpClient
-            .Setup(c => c.PullJob(workerId))
-            .ReturnsAsync(new JobDetails { JobId = Guid.NewGuid(), JobType = jobType, Payload = "{}", Status = "Queued" });
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync([new JobDetails { JobId = Guid.NewGuid(), JobType = jobType, Payload = "{}", Status = "Queued" }]);
 
-        // Act
+        _httpClient
+            .Setup(c => c.BulkUpdateJobStatus(It.IsAny<BulkUpdateJobStatusRequest>()))
+            .ReturnsAsync(new BulkUpdateJobStatusResponse
+            {
+                UpdatedRecordCount = 1,
+                Errors = Enumerable.Empty<UpdateJobStatusErrorResponse>()
+            });
+
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
-        // Assert
-        using var cts = new CancellationTokenSource();
-        var ex = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-        {
-            await worker.RunAsync(cts.Token);
-        });
-        await worker.DisposeAsync();
+        // Act
+        using var cts = new CancellationTokenSource(200);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
 
-        Assert.That(ex!.Message, Does.Contain("unknown-type"));
+        // Assert
+        _httpClient.Verify(c => c.BulkUpdateJobStatus(
+            It.Is<BulkUpdateJobStatusRequest>(r =>
+                r.JobStatuses.Count == 1 &&
+                r.JobStatuses[0].Status == "failed" 
+            )),
+            Times.AtLeastOnce);
+    }
+
+    [Test]
+    public async Task RunAsync_WhenPullFails_ShouldRetryNextPollCycle()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
+
+        SetupWorkerRegistration(workerId);
+
+        var callCount = 0;
+        _httpClient
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                return callCount switch
+                {
+                    1 => throw new InvalidOperationException("API down"),
+                    2 => throw new InvalidOperationException("API still down"),
+                    _ => [new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" }]
+                };
+            });
+
+        _httpClient
+            .Setup(c => c.BulkUpdateJobStatus(It.IsAny<BulkUpdateJobStatusRequest>()))
+            .ReturnsAsync(new BulkUpdateJobStatusResponse
+            {
+                UpdatedRecordCount = 1,
+                Errors = Enumerable.Empty<UpdateJobStatusErrorResponse>()
+            });
+
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10,
+            MaxConcurrentHandlers = 1,
+            ResultFlushIntervalMs = 10,
+            MaxResultRetries = 0,
+            ReporterBackoffBaseMs = 10
+        });
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_httpClient.Object);
+        services.AddSingleton(options);
+        using var sp = services.BuildServiceProvider();
+
+        var factory = new TaskWorkerFactory(sp);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(500);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
+
+        // Assert
+        Assert.That(callCount, Is.GreaterThanOrEqualTo(3));
+        _httpClient.Verify(c => c.BulkUpdateJobStatus(
+            It.Is<BulkUpdateJobStatusRequest>(r => r.JobStatuses[0].Status == "completed")),
+            Times.AtLeastOnce);
+    }
+
+    [Test]
+    public async Task RunAsync_WhenBatchResultSyncFails_ShouldRetry()
+    {
+        // Arrange
+        var jobId = Guid.NewGuid();
+        var jobType = new JobTypeRef { Name = "email", Version = 1 };
+        var workerId = Guid.NewGuid();
+
+        SetupWorkerRegistration(workerId);
+
+        var pullCount = 0;
+        _httpClient
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync(() =>
+            {
+                pullCount++;
+                return pullCount == 1
+                    ? [new JobDetails { JobId = jobId, JobType = jobType, Payload = "{}", Status = "Queued" }]
+                    : Enumerable.Empty<JobDetails>();
+            });
+
+        var submitCallCount = 0;
+        _httpClient
+            .Setup(c => c.BulkUpdateJobStatus(It.IsAny<BulkUpdateJobStatusRequest>()))
+            .ReturnsAsync(() =>
+            {
+                submitCallCount++;
+                return submitCallCount switch
+                {
+                    1 => throw new InvalidOperationException("API down"),
+                    _ => new BulkUpdateJobStatusResponse
+                    {
+                        UpdatedRecordCount = 1,
+                        Errors = Enumerable.Empty<UpdateJobStatusErrorResponse>()
+                    }
+                };
+            });
+
+        var options = Options.Create(new TaskMasterConsumerOptions
+        {
+            PollingWaitIntervalMs = 10,
+            MaxConcurrentHandlers = 1,
+            ResultFlushIntervalMs = 10,
+            MaxResultRetries = 2,
+            ReporterBackoffBaseMs = 10
+        });
+
+        var services = new ServiceCollection();
+        services.AddSingleton(_httpClient.Object);
+        services.AddSingleton(options);
+        using var sp = services.BuildServiceProvider();
+
+        var factory = new TaskWorkerFactory(sp);
+        var worker = factory.CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
+
+        // Act
+        using var cts = new CancellationTokenSource(500);
+        try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
+
+        // Assert - first call fails, second succeeds
+        Assert.That(submitCallCount, Is.EqualTo(2));
     }
 
     [Test]
@@ -383,15 +514,14 @@ public class TaskWorkerTests
         SetupWorkerRegistration(workerId);
 
         _httpClient
-            .Setup(c => c.PullJob(workerId))
-            .ReturnsAsync((JobDetails?)null);
+            .Setup(c => c.PullJobs(workerId, It.IsAny<int>()))
+            .ReturnsAsync(Enumerable.Empty<JobDetails>());
 
         var (_, worker) = CreateWorker("test-worker", cfg => cfg.Handle<EmailPayload, EmailHandler>());
 
         // Act
         using var cts = new CancellationTokenSource(200);
         try { await worker.RunAsync(cts.Token); } catch (OperationCanceledException) { }
-        await worker.DisposeAsync();
 
         // Assert
         _httpClient.Verify(c => c.RemoveWorker(workerId), Times.Once);
