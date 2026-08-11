@@ -3,6 +3,7 @@ using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Jobs;
 
 namespace TaskMaster.API.Repositories
@@ -20,9 +21,33 @@ namespace TaskMaster.API.Repositories
             return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).Where(j => j.JobPublicId == jobPublicId).FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Job>> GetAllJobsAsync()
+        public async Task<PagedResult<Job>> GetAllJobsAsync(JobQuery query)
         {
-            return await _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).OrderByDescending(j => j.Id).ToListAsync();
+            var jobsQuery = _context.Jobs.Include(j => j.JobType).Include(j => j.AssignedWorker).AsQueryable();
+
+            if (query.Status.HasValue)
+            {
+                jobsQuery = jobsQuery.Where(j => j.Status == query.Status.Value);
+            }
+
+            if (query.Page == null || query.PageSize == null)
+            {
+                var all = await jobsQuery.OrderByDescending(j => j.Id).ToListAsync();
+                return PagedResult<Job>.Unpaged(all);
+            }
+
+            var page = query.Page.Value;
+            var pageSize = query.PageSize.Value;
+
+            var totalCount = await jobsQuery.CountAsync();
+
+            var items = await jobsQuery
+                .OrderByDescending(j => j.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return PagedResult<Job>.Create(items, page, pageSize, totalCount);
         }
 
         public async Task<Job?> GetByJobPublicIdAndWorkerPublicIdAsync(Guid jobPublicId, Guid workerPublicId)
@@ -31,6 +56,22 @@ namespace TaskMaster.API.Repositories
                 .Include(j => j.JobType)
                 .Where(j => j.JobPublicId == jobPublicId && j.AssignedWorker!.WorkerPublicId == workerPublicId)
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<JobStatusCounts> CountJobsByStatusAsync()
+        {
+            var grouped = await _context.Jobs
+                .GroupBy(j => j.Status)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            return new JobStatusCounts
+            {
+                Queued = grouped.FirstOrDefault(x => x.Status == JobStatusEnum.Queued)?.Count ?? 0,
+                InProgress = grouped.FirstOrDefault(x => x.Status == JobStatusEnum.InProgress)?.Count ?? 0,
+                Completed = grouped.FirstOrDefault(x => x.Status == JobStatusEnum.Completed)?.Count ?? 0,
+                Failed = grouped.FirstOrDefault(x => x.Status == JobStatusEnum.Failed)?.Count ?? 0
+            };
         }
 
         public async Task<int> UnassignJobForWorkerIdAsync(long workerId)

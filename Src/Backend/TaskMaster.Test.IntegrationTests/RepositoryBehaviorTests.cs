@@ -5,7 +5,9 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Jobs;
+using TaskMaster.API.Models.Workers;
 using TaskMaster.Test.IntegrationTests.Abstracts;
 using TaskMaster.Test.IntegrationTests.Data;
 
@@ -107,7 +109,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetAllJobs_WhenMultipleJobs_ShouldReturnAll()
+    public async Task GetAllJobs_WhenMultipleJobs_ShouldReturnPagedJobs()
     {
         // Arrange
         await ExecuteDbAsync(async db =>
@@ -122,10 +124,121 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
 
         // Act
-        var jobs = await repository.GetAllJobsAsync();
+        var result = await repository.GetAllJobsAsync(new JobQuery { Page = 1, PageSize = 20 });
 
         // Assert
-        Assert.That(jobs, Has.Count.EqualTo(2));
+        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task GetAllJobs_WhenStatusFilterApplied_ShouldReturnOnlyMatchingJobs()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var queuedJob = TestData.Job(jobType);
+            var completedJob = TestData.Job(jobType);
+            completedJob.Status = JobStatusEnum.Completed;
+            var failedJob = TestData.Job(jobType);
+            failedJob.Status = JobStatusEnum.Failed;
+            db.AddRange(jobType, queuedJob, completedJob, failedJob);
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.GetAllJobsAsync(new JobQuery { Page = 1, PageSize = 20, Status = JobStatusEnum.Completed });
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(1));
+        Assert.That(result.Items.Single().Status, Is.EqualTo(JobStatusEnum.Completed));
+        Assert.That(result.TotalCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task GetAllJobs_WhenPaging_ShouldReturnCorrectPageAndTotalCount()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            db.Add(jobType);
+            db.AddRange(
+                TestData.Job(jobType), TestData.Job(jobType), TestData.Job(jobType),
+                TestData.Job(jobType), TestData.Job(jobType));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.GetAllJobsAsync(new JobQuery { Page = 2, PageSize = 2 });
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(result.TotalCount, Is.EqualTo(5));
+        Assert.That(result.TotalPages, Is.EqualTo(3));
+        Assert.That(result.HasPreviousPage, Is.True);
+        Assert.That(result.HasNextPage, Is.True);
+    }
+
+    [Test]
+    public async Task GetAllJobs_WhenPagingPastLastPage_ShouldReturnEmptyPage()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            db.Add(jobType);
+            db.AddRange(TestData.Job(jobType), TestData.Job(jobType));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.GetAllJobsAsync(new JobQuery { Page = 5, PageSize = 20 });
+
+        // Assert
+        Assert.That(result.Items, Is.Empty);
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+        Assert.That(result.HasNextPage, Is.False);
+    }
+
+    [Test]
+    public async Task GetAllJobs_WhenNoPagingParams_ShouldReturnAllJobsUnpaged()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            db.Add(jobType);
+            db.AddRange(
+                TestData.Job(jobType), TestData.Job(jobType), TestData.Job(jobType),
+                TestData.Job(jobType), TestData.Job(jobType));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.GetAllJobsAsync(new JobQuery());
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(5));
+        Assert.That(result.TotalCount, Is.EqualTo(5));
+        Assert.That(result.Page, Is.EqualTo(1));
+        Assert.That(result.PageSize, Is.EqualTo(5));
+        Assert.That(result.TotalPages, Is.EqualTo(1));
+        Assert.That(result.HasPreviousPage, Is.False);
+        Assert.That(result.HasNextPage, Is.False);
     }
 
     [Test]
@@ -293,7 +406,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetAllWorkers_WhenMultipleWorkers_ShouldReturnAll()
+    public async Task GetAllWorkers_WhenMultipleWorkers_ShouldReturnPagedWorkers()
     {
         // Arrange
         await ExecuteDbAsync(async db =>
@@ -308,10 +421,220 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
 
         // Act
-        var workers = await repository.GetAllWorkersAsync();
+        var result = await repository.GetAllWorkersAsync(new WorkerQuery { Page = 1, PageSize = 20 });
 
         // Assert
-        Assert.That(workers, Has.Count.EqualTo(2));
+        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+    }
+
+    [Test]
+    public async Task GetAllWorkers_WhenStatusFilterApplied_ShouldReturnOnlyActiveWorkers()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var activeWorker = TestData.Worker("worker-a", [jobType]);
+            var inactiveWorker = TestData.Worker("worker-b", [jobType]);
+            inactiveWorker.Status = WorkerStatusEnum.InActive;
+            db.AddRange(jobType, activeWorker, inactiveWorker);
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var result = await repository.GetAllWorkersAsync(new WorkerQuery { Page = 1, PageSize = 20, Status = WorkerStatusEnum.Active });
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(1));
+        Assert.That(result.Items.Single().Status, Is.EqualTo(WorkerStatusEnum.Active));
+        Assert.That(result.TotalCount, Is.EqualTo(1));
+    }
+
+    [Test]
+    public async Task GetAllWorkers_WhenPaging_ShouldReturnCorrectPageAndTotalCount()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            db.Add(jobType);
+            db.AddRange(
+                TestData.Worker("worker-a", [jobType]), TestData.Worker("worker-b", [jobType]),
+                TestData.Worker("worker-c", [jobType]), TestData.Worker("worker-d", [jobType]),
+                TestData.Worker("worker-e", [jobType]));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var result = await repository.GetAllWorkersAsync(new WorkerQuery { Page = 2, PageSize = 2 });
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(2));
+        Assert.That(result.TotalCount, Is.EqualTo(5));
+        Assert.That(result.TotalPages, Is.EqualTo(3));
+    }
+
+    [Test]
+    public async Task GetAllWorkers_WhenNoPagingParams_ShouldReturnAllWorkersUnpaged()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            db.Add(jobType);
+            db.AddRange(
+                TestData.Worker("worker-a", [jobType]), TestData.Worker("worker-b", [jobType]),
+                TestData.Worker("worker-c", [jobType]));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var result = await repository.GetAllWorkersAsync(new WorkerQuery());
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(3));
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.Page, Is.EqualTo(1));
+        Assert.That(result.PageSize, Is.EqualTo(3));
+        Assert.That(result.TotalPages, Is.EqualTo(1));
+        Assert.That(result.HasPreviousPage, Is.False);
+        Assert.That(result.HasNextPage, Is.False);
+    }
+
+    [Test]
+    public async Task GetAllJobTypes_WhenMultipleJobTypes_ShouldReturnPagedJobTypes()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            db.AddRange(TestData.JobType("email", 1), TestData.JobType("video", 2), TestData.JobType("audio", 3));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobTypeRepository>();
+
+        // Act
+        var result = await repository.GetAllJobTypesAsync(new PaginationQuery { Page = 2, PageSize = 2 });
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(1));
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.TotalPages, Is.EqualTo(2));
+        Assert.That(result.HasPreviousPage, Is.True);
+        Assert.That(result.HasNextPage, Is.False);
+    }
+
+    [Test]
+    public async Task GetAllJobTypes_WhenNoPagingParams_ShouldReturnAllJobTypesUnpaged()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            db.AddRange(TestData.JobType("email", 1), TestData.JobType("video", 2), TestData.JobType("audio", 3));
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobTypeRepository>();
+
+        // Act
+        var result = await repository.GetAllJobTypesAsync(new PaginationQuery());
+
+        // Assert
+        Assert.That(result.Items, Has.Count.EqualTo(3));
+        Assert.That(result.TotalCount, Is.EqualTo(3));
+        Assert.That(result.Page, Is.EqualTo(1));
+        Assert.That(result.PageSize, Is.EqualTo(3));
+        Assert.That(result.TotalPages, Is.EqualTo(1));
+        Assert.That(result.HasPreviousPage, Is.False);
+        Assert.That(result.HasNextPage, Is.False);
+    }
+
+    [Test]
+    public async Task CountJobsByStatus_WhenMixedStatuses_ShouldReturnGroupedCounts()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var queued = TestData.Job(jobType);
+            var inProgress = TestData.Job(jobType);
+            inProgress.Status = JobStatusEnum.InProgress;
+            var completed = TestData.Job(jobType);
+            completed.Status = JobStatusEnum.Completed;
+            var failed = TestData.Job(jobType);
+            failed.Status = JobStatusEnum.Failed;
+            db.AddRange(jobType, queued, inProgress, completed, failed);
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.CountJobsByStatusAsync();
+
+        // Assert
+        Assert.That(result.Queued, Is.EqualTo(1));
+        Assert.That(result.InProgress, Is.EqualTo(1));
+        Assert.That(result.Completed, Is.EqualTo(1));
+        Assert.That(result.Failed, Is.EqualTo(1));
+        Assert.That(result.Total, Is.EqualTo(4));
+    }
+
+    [Test]
+    public async Task CountJobsByStatus_WhenNoJobs_ShouldReturnAllZero()
+    {
+        // Arrange
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+
+        // Act
+        var result = await repository.CountJobsByStatusAsync();
+
+        // Assert
+        Assert.That(result.Queued, Is.EqualTo(0));
+        Assert.That(result.InProgress, Is.EqualTo(0));
+        Assert.That(result.Completed, Is.EqualTo(0));
+        Assert.That(result.Failed, Is.EqualTo(0));
+        Assert.That(result.Total, Is.EqualTo(0));
+    }
+
+    [Test]
+    public async Task CountWorkersByStatus_WhenMixedStatuses_ShouldReturnGroupedCounts()
+    {
+        // Arrange
+        await ExecuteDbAsync(async db =>
+        {
+            var jobType = TestData.JobType();
+            var active = TestData.Worker("worker-a", [jobType]);
+            var inactive = TestData.Worker("worker-b", [jobType]);
+            inactive.Status = WorkerStatusEnum.InActive;
+            db.AddRange(jobType, active, inactive);
+            await db.SaveChangesAsync();
+        });
+
+        await using var scope = ServiceProvider.CreateAsyncScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
+
+        // Act
+        var result = await repository.CountWorkersByStatusAsync();
+
+        // Assert
+        Assert.That(result.Active, Is.EqualTo(1));
+        Assert.That(result.InActive, Is.EqualTo(1));
+        Assert.That(result.Total, Is.EqualTo(2));
     }
 
     [Test]

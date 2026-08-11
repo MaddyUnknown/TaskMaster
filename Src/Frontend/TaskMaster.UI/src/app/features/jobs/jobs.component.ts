@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { Subject, takeUntil } from 'rxjs';
 import { LucidePlus } from '@lucide/angular';
 import { ApiService } from '../../core/services/api.service';
 import { ContentComponent } from '../../shared/layout/content/content.component';
@@ -11,7 +12,8 @@ import {
 import { LoadingComponent } from '../../shared/components/loading/loading.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { ButtonComponent } from '../../shared/components/button/button.component';
-import { Job, JobStatus, CreateJobRequest } from '../../core/models';
+import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
+import { Job, JobStatus, CreateJobRequest, JobCounts } from '../../core/models';
 import { CreateJobDialogComponent } from './create-job-dialog/create-job-dialog.component';
 
 @Component({
@@ -25,72 +27,83 @@ import { CreateJobDialogComponent } from './create-job-dialog/create-job-dialog.
     LoadingComponent,
     EmptyStateComponent,
     ButtonComponent,
+    PaginationComponent,
     CreateJobDialogComponent,
     LucidePlus,
   ],
   templateUrl: './jobs.component.html',
   styleUrl: './jobs.component.css',
 })
-export class JobsComponent implements OnInit {
+export class JobsComponent implements OnInit, OnDestroy {
   jobs: Job[] = [];
+  counts: JobCounts = { queued: 0, inProgress: 0, completed: 0, failed: 0, total: 0 };
   loading = true;
   activeFilter = 'all';
+  page = 1;
+  pageSize = 20;
+  totalCount = 0;
+  totalPages = 0;
   showCreateDialog = false;
   submitting = false;
+
+  private destroy$ = new Subject<void>();
 
   constructor(private api: ApiService) {}
 
   get filterTabs() {
     return [
-      { label: 'All', value: 'all', count: this.jobs.length },
-      {
-        label: 'Queued',
-        value: 'queued',
-        count: this.jobs.filter((x) => x.status === JobStatus.Queued).length,
-      },
-      {
-        label: 'In Progress',
-        value: 'inProgress',
-        count: this.jobs.filter((x) => x.status === JobStatus.InProgress)
-          .length,
-      },
-      {
-        label: 'Completed',
-        value: 'completed',
-        count: this.jobs.filter((x) => x.status === JobStatus.Completed).length,
-      },
-      {
-        label: 'Failed',
-        value: 'failed',
-        count: this.jobs.filter((x) => x.status === JobStatus.Failed).length,
-      },
+      { label: 'All', value: 'all', count: this.counts.total },
+      { label: 'Queued', value: 'queued', count: this.counts.queued },
+      { label: 'In Progress', value: 'inProgress', count: this.counts.inProgress },
+      { label: 'Completed', value: 'completed', count: this.counts.completed },
+      { label: 'Failed', value: 'failed', count: this.counts.failed },
     ];
-  }
-
-  get filteredJobs(): Job[] {
-    if (this.activeFilter === 'all') return this.jobs;
-    const map: Record<string, JobStatus> = {
-      queued: JobStatus.Queued,
-      inProgress: JobStatus.InProgress,
-      completed: JobStatus.Completed,
-      failed: JobStatus.Failed,
-    };
-    return this.jobs.filter((x) => x.status === map[this.activeFilter]);
   }
 
   ngOnInit() {
     this.loadJobs();
   }
 
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   private loadJobs() {
-    this.api.getJobs().subscribe((j) => {
-      this.jobs = j;
-      this.loading = false;
-    });
+    const status = this.activeFilter === 'all' ? undefined : this.mapFilterToStatus(this.activeFilter);
+    this.api
+      .getJobsWithCounts({ page: this.page, pageSize: this.pageSize, status })
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(({ page, counts }) => {
+        this.jobs = page.items;
+        this.totalCount = page.totalCount;
+        this.totalPages = page.totalPages;
+        this.counts = counts;
+        this.loading = false;
+      });
+  }
+
+  private mapFilterToStatus(filter: string): JobStatus | undefined {
+    const map: Record<string, JobStatus> = {
+      queued: JobStatus.Queued,
+      inProgress: JobStatus.InProgress,
+      completed: JobStatus.Completed,
+      failed: JobStatus.Failed,
+    };
+    return map[filter];
   }
 
   setFilter(value: string) {
     this.activeFilter = value;
+    this.page = 1;
+    this.loading = true;
+    this.loadJobs();
+  }
+
+  onPageChange(page: number) {
+    this.page = page;
+    this.loading = true;
+    this.loadJobs();
   }
 
   openCreateDialog() {

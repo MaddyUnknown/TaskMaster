@@ -100,11 +100,10 @@ namespace TaskMaster.API.Queries
             });
         }
 
-        public async Task<List<Job>> GetRecentJobsAsync(int count)
+        public async Task<List<SystemActivity>> GetRecentSystemActivitiesAsync(int count)
         {
-            return await _context.Jobs
-                .Include(j => j.JobType)
-                .OrderByDescending(j => j.ModifyDateTime)
+            return await _context.SystemActivities
+                .OrderByDescending(a => a.CreatedDateTime)
                 .Take(count)
                 .ToListAsync();
         }

@@ -1,7 +1,7 @@
 <app-card title="Recent Activity" class="dashboard-activity">
   <div class="activity-list">
     @if (!loading) {
-      @for (activity of activities; track activity.timestamp) {
+      @for (activity of activities; track activity.entityId + activity.timestamp) {
         <div class="activity-item">
           <div
             class="activity-dot activity-{{ activity.status.toLowerCase() }}"

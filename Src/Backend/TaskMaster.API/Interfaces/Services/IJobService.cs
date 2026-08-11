@@ -1,4 +1,5 @@
 ﻿using TaskMaster.API.Enums;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.Workers;
 
@@ -11,7 +12,8 @@ namespace TaskMaster.API.Interfaces.Services
         Task<BulkUpdateJobStatusResponse> ChangeJobStatusAsync(BulkUpdateJobStatus request);
         Task<JobDetails?> GetNextWorkerJobsAsync(Guid workerId);
         Task<IEnumerable<JobDetails>> GetNextWorkerJobsAsync(Guid workerId, int maxJobs);
-        Task<IEnumerable<JobDetails>> GetAllJobsAsync();
+        Task<PagedResult<JobDetails>> GetAllJobsAsync(JobQuery query);
         Task<JobDetails?> GetJobByPublicIdAsync(Guid jobId);
+        Task<JobStatusCounts> GetJobStatusCountsAsync();
     }
 }

@@ -27,7 +27,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<JobTypeDetails>>>> GetAll([FromQuery] string? name, [FromQuery] long? version)
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobTypeDetails>>>> GetAll([FromQuery] string? name, [FromQuery] long? version, [FromQuery] PaginationQuery query)
         {
             if (name != null && version.HasValue)
             {
@@ -38,9 +38,9 @@ namespace TaskMaster.API.Controllers
                 return Ok(ApiResponse<IEnumerable<JobTypeDetails>>.Success(result));
             }
 
-            var allJobTypes = await _jobTypeService.GetAllJobTypesAsync();
-            _logger.LogInformation("Retrieved {JobTypeCount} job types", allJobTypes.Count());
-            return Ok(ApiResponse<IEnumerable<JobTypeDetails>>.Success(allJobTypes));
+            var allJobTypes = await _jobTypeService.GetAllJobTypesAsync(query);
+            _logger.LogInformation("Retrieved {JobTypeCount} job types (page {Page}/{TotalPages})", allJobTypes.TotalCount, allJobTypes.Page, allJobTypes.TotalPages);
+            return Ok(ApiResponse<PagedResult<JobTypeDetails>>.Success(allJobTypes));
         }
     }
 }

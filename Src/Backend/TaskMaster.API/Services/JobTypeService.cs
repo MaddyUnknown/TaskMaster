@@ -5,7 +5,9 @@ using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Mappers;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.JobTypes;
+using TaskMaster.API.Validation;
 
 namespace TaskMaster.API.Services
 {
@@ -39,10 +41,13 @@ namespace TaskMaster.API.Services
             return jobTypeEntity.ToJobTypeDetails();
         }
 
-        public async Task<IEnumerable<JobTypeDetails>> GetAllJobTypesAsync()
+        public async Task<PagedResult<JobTypeDetails>> GetAllJobTypesAsync(PaginationQuery query)
         {
-            var jobTypes = await _jobTypeRepository.GetAllJobTypesAsync();
-            return jobTypes.Select(j => j.ToJobTypeDetails());
+            var errors = PaginationValidator.Validate(query);
+            if (errors.Count > 0) throw new ValidationException(errors);
+
+            var result = await _jobTypeRepository.GetAllJobTypesAsync(query);
+            return PagedResult<JobTypeDetails>.Create(result.Items.Select(j => j.ToJobTypeDetails()), result.Page, result.PageSize, result.TotalCount);
         }
 
         public async Task<JobTypeDetails?> GetJobTypeAsync(JobTypeRef jobType)

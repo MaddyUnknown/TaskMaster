@@ -20,7 +20,7 @@
 
   @if (loading) {
     <app-loading type="pulse" text="Loading workers..." />
-  } @else if (filteredWorkers.length === 0) {
+  } @else if (workers.length === 0) {
     <app-empty-state
       icon="🖥️"
       title="No workers"
@@ -38,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (worker of filteredWorkers; track worker.id) {
+          @for (worker of workers; track worker.id) {
             <tr class="data-row" [routerLink]="['/workers', worker.id]">
               <td class="cell-mono">{{ worker.id }}</td>
               <td>{{ worker.name }}</td>
@@ -57,5 +57,12 @@
         </tbody>
       </table>
     </div>
+    @if (totalPages > 1) {
+      <app-pagination
+        [page]="page"
+        [totalPages]="totalPages"
+        (pageChange)="onPageChange($event)"
+      />
+    }
   }
 </app-content>

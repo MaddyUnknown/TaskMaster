@@ -6,8 +6,12 @@ using System.Text.Json.Serialization;
 using TaskMaster.API.BackgroundServices;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
+using TaskMaster.API.Events;
+using TaskMaster.API.Handlers;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.EventHandler;
+using TaskMaster.API.Interfaces.Publisher;
 using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
@@ -15,6 +19,7 @@ using TaskMaster.API.Middleware;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Models.Workers;
+using TaskMaster.API.Publishers;
 using TaskMaster.API.Queries;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
@@ -76,6 +81,16 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IWorkerService, WorkerService>();
             builder.Services.AddTransient<IDashboardQuery, DashboardQuery>();
             builder.Services.AddTransient<IDashboardService, DashboardService>();
+
+            // Event infrastructure
+            builder.Services.AddTransient<IEventPublisher, EventPublisher>();
+            builder.Services.AddTransient<IEventHandler<JobCreatedEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<JobAssignedEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<JobCompletedEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<JobFailedEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<WorkerRegisteredEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<WorkerInactiveEvent>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<WorkerRemovedEvent>, SystemActivityEventHandler>();
 
             // Validators
             builder.Services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();

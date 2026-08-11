@@ -2,7 +2,6 @@ using Moq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Queries;
-using TaskMaster.API.Models.Dashboard;
 using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Services;
 
@@ -21,86 +20,110 @@ public class DashboardServiceTests
     }
 
     [Test]
-    public async Task GetRecentActivityAsync_WhenCompletedJob_ShouldMapAsSuccess()
+    public async Task GetRecentActivityAsync_WhenJobCompletedActivity_ShouldMapAsSuccess()
     {
-        var job = new Job
+        // Arrage
+        var activity = new SystemActivity
         {
-            JobPublicId = Guid.NewGuid(),
-            JobType = new JobType { Name = "email", Version = 1 },
-            Status = JobStatusEnum.Completed,
-            CreatedDateTime = new DateTime(2026, 1, 1),
-            ModifyDateTime = new DateTime(2026, 1, 2)
+            EntityType = EntityType.Job,
+            EntityId = Guid.NewGuid(),
+            ActivityType = ActivityType.JobCompleted,
+            Message = "Job 'email v1' completed by worker 'worker-a'",
+            CreatedDateTime = new DateTime(2026, 1, 2)
         };
-        _dashboardQuery.Setup(q => q.GetRecentJobsAsync(10)).ReturnsAsync([job]);
 
-        var result = await CreateService().GetRecentActivityAsync();
+        _dashboardQuery.Setup(q => q.GetRecentSystemActivitiesAsync(10)).ReturnsAsync([activity]);
 
+        // Action
+        var result = await CreateService().GetRecentActivityAsync(10);
+
+        // Assert
         var item = result.Single();
         Assert.That(item.Status, Is.EqualTo(ActivityStatus.Success));
-        Assert.That(item.Type, Is.EqualTo(JobStatusEnum.Completed));
-        Assert.That(item.Message, Does.Contain(job.Status.ToString()));
-        Assert.That(item.Timestamp, Is.EqualTo(job.ModifyDateTime));
+        Assert.That(item.ActivityType, Is.EqualTo(ActivityType.JobCompleted));
+        Assert.That(item.EntityType, Is.EqualTo(EntityType.Job));
+        Assert.That(item.EntityId, Is.EqualTo(activity.EntityId));
+        Assert.That(item.Message, Is.EqualTo(activity.Message));
+        Assert.That(item.Timestamp, Is.EqualTo(activity.CreatedDateTime));
     }
 
     [Test]
-    public async Task GetRecentActivityAsync_WhenFailedJob_ShouldMapAsError()
+    public async Task GetRecentActivityAsync_WhenJobFailedActivity_ShouldMapAsError()
     {
-        var job = new Job
+        // Arrange
+        var activity = new SystemActivity
         {
-            JobPublicId = Guid.NewGuid(),
-            JobType = new JobType { Name = "email", Version = 1 },
-            Status = JobStatusEnum.Failed,
-            CreatedDateTime = DateTime.Now
+            EntityType = EntityType.Job,
+            EntityId = Guid.NewGuid(),
+            ActivityType = ActivityType.JobFailed,
+            Message = "Job 'email v1' failed on worker 'worker-a'",
+            CreatedDateTime = new DateTime(2026, 1, 2)
         };
-        _dashboardQuery.Setup(q => q.GetRecentJobsAsync(10)).ReturnsAsync([job]);
 
-        var result = await CreateService().GetRecentActivityAsync();
+        _dashboardQuery.Setup(q => q.GetRecentSystemActivitiesAsync(10)).ReturnsAsync([activity]);
 
+        // Act
+        var result = await CreateService().GetRecentActivityAsync(10);
+        
+        // Assert
         var item = result.Single();
         Assert.That(item.Status, Is.EqualTo(ActivityStatus.Error));
-        Assert.That(item.Message, Does.Contain(job.Status.ToString()));
+        Assert.That(item.ActivityType, Is.EqualTo(ActivityType.JobFailed));
     }
 
     [Test]
-    public async Task GetRecentActivityAsync_WhenQueuedJob_ShouldMapAsInfo()
+    public async Task GetRecentActivityAsync_WhenWorkerRegisteredActivity_ShouldMapAsSuccess()
     {
-        var job = new Job
+        // Arrange
+        var activity = new SystemActivity
         {
-            JobPublicId = Guid.NewGuid(),
-            JobType = new JobType { Name = "email", Version = 1 },
-            Status = JobStatusEnum.Queued,
-            CreatedDateTime = DateTime.Now
+            EntityType = EntityType.Worker,
+            EntityId = Guid.NewGuid(),
+            ActivityType = ActivityType.WorkerRegistered,
+            Message = "Worker 'worker-a' registered",
+            CreatedDateTime = new DateTime(2026, 1, 2)
         };
-        _dashboardQuery.Setup(q => q.GetRecentJobsAsync(10)).ReturnsAsync([job]);
 
-        var result = await CreateService().GetRecentActivityAsync();
+        _dashboardQuery.Setup(q => q.GetRecentSystemActivitiesAsync(10)).ReturnsAsync([activity]);
 
+        // Act
+        var result = await CreateService().GetRecentActivityAsync(10);
+
+        // Assert
+        var item = result.Single();
+        Assert.That(item.Status, Is.EqualTo(ActivityStatus.Success));
+        Assert.That(item.EntityType, Is.EqualTo(EntityType.Worker));
+        Assert.That(item.Message, Is.EqualTo(activity.Message));
+    }
+
+    [Test]
+    public async Task GetRecentActivityAsync_WhenJobCreatedActivity_ShouldMapAsInfo()
+    {
+        // Arrange
+        var activity = new SystemActivity
+        {
+            EntityType = EntityType.Job,
+            EntityId = Guid.NewGuid(),
+            ActivityType = ActivityType.JobCreated,
+            Message = "Job 'email v1' created",
+            CreatedDateTime = new DateTime(2026, 1, 1)
+        };
+
+        _dashboardQuery.Setup(q => q.GetRecentSystemActivitiesAsync(10)).ReturnsAsync([activity]);
+
+        // Act
+        var result = await CreateService().GetRecentActivityAsync(10);
+
+        // Assert
         var item = result.Single();
         Assert.That(item.Status, Is.EqualTo(ActivityStatus.Info));
-        Assert.That(item.Message, Does.Contain(job.Status.ToString()));
-    }
-
-    [Test]
-    public async Task GetRecentActivityAsync_WhenNoModifyDate_ShouldFallbackToCreatedDate()
-    {
-        var job = new Job
-        {
-            JobPublicId = Guid.NewGuid(),
-            JobType = new JobType { Name = "email", Version = 1 },
-            Status = JobStatusEnum.InProgress,
-            CreatedDateTime = new DateTime(2026, 6, 1, 12, 0, 0)
-        };
-        _dashboardQuery.Setup(q => q.GetRecentJobsAsync(10)).ReturnsAsync([job]);
-
-        var result = await CreateService().GetRecentActivityAsync();
-
-        var item = result.Single();
-        Assert.That(item.Timestamp, Is.EqualTo(job.CreatedDateTime));
+        Assert.That(item.Timestamp, Is.EqualTo(activity.CreatedDateTime));
     }
 
     [Test]
     public async Task GetSystemMetricsAsync_WhenJobsExist_ShouldCalculateSuccessRate()
     {
+        // Arrange
         _dashboardQuery
             .Setup(q => q.GetDashboardDataAsync())
             .ReturnsAsync(new DashboardData
@@ -114,8 +137,10 @@ public class DashboardServiceTests
                 DatabaseHealthy = true
             });
 
+        // Act
         var result = await CreateService().GetSystemMetricsAsync();
 
+        // Assert
         Assert.That(result.ActiveWorkers, Is.EqualTo(4));
         Assert.That(result.TotalJobs, Is.EqualTo(100));
         Assert.That(result.QueuedJobs, Is.EqualTo(10));
@@ -124,6 +149,7 @@ public class DashboardServiceTests
     [Test]
     public async Task GetSystemHealthAsync_WhenDbHealthy_ShouldSetHealthyStatus()
     {
+        // Arrange
         _dashboardQuery
             .Setup(q => q.GetDashboardDataAsync())
             .ReturnsAsync(new DashboardData
@@ -134,8 +160,10 @@ public class DashboardServiceTests
                 QueuedJobs = 5
             });
 
+        // Act
         var result = await CreateService().GetSystemHealthAsync();
 
+        // Assert
         Assert.That(result.Database.Status, Is.EqualTo(HealthStatusEnum.Healthy));
         Assert.That(result.Api.Status, Is.EqualTo(HealthStatusEnum.Healthy));
         Assert.That(result.Workers.Status, Is.EqualTo(HealthStatusEnum.Healthy));
@@ -144,6 +172,7 @@ public class DashboardServiceTests
     [Test]
     public async Task GetSystemHealthAsync_WhenDbUnhealthy_ShouldSetUnhealthyStatus()
     {
+        // Arrange
         _dashboardQuery
             .Setup(q => q.GetDashboardDataAsync())
             .ReturnsAsync(new DashboardData
@@ -154,8 +183,10 @@ public class DashboardServiceTests
                 QueuedJobs = 0
             });
 
+        // Act
         var result = await CreateService().GetSystemHealthAsync();
 
+        // Assert
         Assert.That(result.Database.Status, Is.EqualTo(HealthStatusEnum.Unhealthy));
         Assert.That(result.Workers.Status, Is.EqualTo(HealthStatusEnum.Degraded));
     }
@@ -163,6 +194,7 @@ public class DashboardServiceTests
     [Test]
     public async Task GetJobStatsAsync_WhenJobsExist_ShouldReturnBuckets()
     {
+        // Arrange
         var now = new DateTime(2026, 7, 11, 12, 0, 0);
         var expected = new List<JobStatsItem>
         {
@@ -182,8 +214,10 @@ public class DashboardServiceTests
 
         _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
 
+        // Act
         var result = (await CreateService().GetJobStatsAsync()).ToList();
 
+        // Assert
         Assert.That(result, Has.Count.EqualTo(12));
         Assert.That(result.Single(i => i.BucketHour == "16:00").JobCount, Is.EqualTo(5));
         Assert.That(result.Single(i => i.BucketHour == "20:00").JobCount, Is.EqualTo(3));
@@ -192,6 +226,7 @@ public class DashboardServiceTests
     [Test]
     public async Task GetJobStatsAsync_WhenNoJobsLast24h_ShouldReturnAllZeros()
     {
+        // Arrange
         var now = new DateTime(2026, 7, 11, 12, 0, 0);
         var hours = new[] { "14:00", "16:00", "18:00", "20:00", "22:00", "00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00" };
         var expected = hours.Select((h, i) => new JobStatsItem
@@ -203,8 +238,10 @@ public class DashboardServiceTests
         }).ToList();
         _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
 
+        // Act
         var result = await CreateService().GetJobStatsAsync();
 
+        // Assert
         Assert.That(result.All(i => i.JobCount == 0), Is.True);
     }
 }

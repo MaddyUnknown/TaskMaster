@@ -31,6 +31,7 @@ namespace TaskMaster.Test.IntegrationTests.Factories
         public async Task ResetDatabaseAsync()
         {
             await _dbContext.Database.ExecuteSqlRawAsync("""
+                DELETE FROM SystemActivities;
                 DELETE FROM Jobs;
                 DELETE FROM WorkerCapabilities;
                 DELETE FROM Workers;

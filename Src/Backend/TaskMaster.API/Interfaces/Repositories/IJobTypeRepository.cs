@@ -1,4 +1,5 @@
 ﻿using TaskMaster.API.Entities;
+using TaskMaster.API.Models.Common;
 
 namespace TaskMaster.API.Interfaces.Repositories
 {
@@ -6,6 +7,6 @@ namespace TaskMaster.API.Interfaces.Repositories
     {
         Task<JobType?> GetByJobTypeNameAndVersionAsync(string jobTypeName, long jobTypeVersion);
         Task<IEnumerable<JobType>> GetByJobTypeNameAndVersionAsync(IEnumerable<(string jobTypeName, long jobTypeVersion)> jobTypes);
-        Task<IEnumerable<JobType>> GetAllJobTypesAsync();
+        Task<PagedResult<JobType>> GetAllJobTypesAsync(PaginationQuery query);
     }
 }

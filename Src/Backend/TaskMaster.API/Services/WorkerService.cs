@@ -3,14 +3,18 @@ using TaskMaster.API.Configs;
 using TaskMaster.API.Constants;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Events;
 using TaskMaster.API.Exceptions;
 using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Publisher;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Mappers;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Workers;
+using TaskMaster.API.Validation;
 
 namespace TaskMaster.API.Services
 {
@@ -24,8 +28,9 @@ namespace TaskMaster.API.Services
         private IJobRepository _jobRepository;
         private IJobTypeRepository _jobTypeRepository;
         private IValidator<RegisterWorker> _registerWorkerValidator;
+        private IEventPublisher _eventPublisher;
 
-        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IJobTypeRepository jobTypeRepository, IOptions<WorkerConfig> workerConfigOption, IValidator<RegisterWorker> registerWorkerValidator)
+        public WorkerService(IUnitOfWork unitOfWork, IRepository<Worker> workerCRUDRepository, IWorkerRepository workerRepository, IJobRepository jobRepository, IJobTypeRepository jobTypeRepository, IOptions<WorkerConfig> workerConfigOption, IValidator<RegisterWorker> registerWorkerValidator, IEventPublisher eventPublisher)
         {
             _unitOfWork = unitOfWork;
             _workerCRUDRepository = workerCRUDRepository;
@@ -35,6 +40,7 @@ namespace TaskMaster.API.Services
 
             _workerConfigOption = workerConfigOption;
             _registerWorkerValidator = registerWorkerValidator;
+            _eventPublisher = eventPublisher;
         }
 
         public async Task<RegisterWorkerResponse> RegisterAsync(RegisterWorker registerWorker)
@@ -75,6 +81,12 @@ namespace TaskMaster.API.Services
                 await _unitOfWork.SaveAsync();
                 await _unitOfWork.CommitTransactionAsync();
 
+                await _eventPublisher.PublishAsync(new WorkerRegisteredEvent
+                {
+                    WorkerId = worker.WorkerPublicId,
+                    WorkerName = worker.WorkerName
+                });
+
                 return worker.ToRegisterWorkerResponse(_workerConfigOption.Value.HeartBeatIntervalSeconds);
             }
             catch
@@ -104,6 +116,13 @@ namespace TaskMaster.API.Services
                 await _unitOfWork.SaveAsync();
 
                 await _unitOfWork.CommitTransactionAsync();
+
+                await _eventPublisher.PublishAsync(new WorkerRemovedEvent
+                {
+                    WorkerId = worker.WorkerPublicId,
+                    WorkerName = worker.WorkerName
+                });
+
                 return worker.ToWorkerDetails();
             }
             catch
@@ -113,10 +132,13 @@ namespace TaskMaster.API.Services
             }
         }
 
-        public async Task<IEnumerable<WorkerDetails>> GetAllWorkersAsync()
+        public async Task<PagedResult<WorkerDetails>> GetAllWorkersAsync(WorkerQuery query)
         {
-            var workers = await _workerRepository.GetAllWorkersAsync();
-            return workers.Select(w => w.ToWorkerDetails());
+            var errors = PaginationValidator.Validate(query);
+            if (errors.Count > 0) throw new ValidationException(errors);
+
+            var result = await _workerRepository.GetAllWorkersAsync(query);
+            return PagedResult<WorkerDetails>.Create(result.Items.Select(w => w.ToWorkerDetails()), result.Page, result.PageSize, result.TotalCount);
         }
 
         public async Task<WorkerDetails?> GetWorkerByPublicIdAsync(Guid workerId)
@@ -124,6 +146,11 @@ namespace TaskMaster.API.Services
             if (workerId == Guid.Empty) throw new ValidationException(ErrorMessage.FieldRequired("WorkerId"));
             var worker = await _workerRepository.GetByPublicIdAsync(workerId);
             return worker?.ToWorkerDetails();
+        }
+
+        public async Task<WorkerStatusCounts> GetWorkerStatusCountsAsync()
+        {
+            return await _workerRepository.CountWorkersByStatusAsync();
         }
 
         public async Task<HeartbeatActionStatus> HeartBeatAsync(Guid workerId)

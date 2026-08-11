@@ -25,11 +25,19 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<JobDetails>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<PagedResult<JobDetails>>>> GetAll([FromQuery] JobQuery query)
         {
-            var jobs = await _jobService.GetAllJobsAsync();
-            _logger.LogInformation("Retrieved {JobCount} jobs", jobs.Count());
-            return Ok(ApiResponse<IEnumerable<JobDetails>>.Success(jobs));
+            var jobs = await _jobService.GetAllJobsAsync(query);
+            _logger.LogInformation("Retrieved {JobCount} jobs (page {Page}/{TotalPages})", jobs.Items.Count, jobs.Page, jobs.TotalPages);
+            return Ok(ApiResponse<PagedResult<JobDetails>>.Success(jobs));
+        }
+
+        [HttpGet("counts")]
+        public async Task<ActionResult<ApiResponse<JobStatusCounts>>> GetCounts()
+        {
+            var counts = await _jobService.GetJobStatusCountsAsync();
+            _logger.LogInformation("Retrieved job status counts (queued {Queued}, in-progress {InProgress}, completed {Completed}, failed {Failed})", counts.Queued, counts.InProgress, counts.Completed, counts.Failed);
+            return Ok(ApiResponse<JobStatusCounts>.Success(counts));
         }
 
         [HttpGet("{jobId}")]

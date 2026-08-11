@@ -31,7 +31,7 @@
 
   @if (loading) {
     <app-loading type="pulse" text="Loading jobs..." />
-  } @else if (filteredJobs.length === 0) {
+  } @else if (jobs.length === 0) {
     <app-empty-state
       icon="📄"
       title="No jobs found"
@@ -50,7 +50,7 @@
           </tr>
         </thead>
         <tbody>
-          @for (job of filteredJobs; track job.id) {
+          @for (job of jobs; track job.id) {
             <tr class="data-row" [routerLink]="['/jobs', job.id]">
               <td class="cell-mono">{{ job.id }}</td>
               <td>
@@ -76,6 +76,13 @@
         </tbody>
       </table>
     </div>
+    @if (totalPages > 1) {
+      <app-pagination
+        [page]="page"
+        [totalPages]="totalPages"
+        (pageChange)="onPageChange($event)"
+      />
+    }
   }
 </app-content>
 
