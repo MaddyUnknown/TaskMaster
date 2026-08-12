@@ -92,6 +92,11 @@ namespace TaskMaster.API
             builder.Services.AddTransient<IEventHandler<WorkerInactiveEvent>, SystemActivityEventHandler>();
             builder.Services.AddTransient<IEventHandler<WorkerRemovedEvent>, SystemActivityEventHandler>();
 
+            builder.Services.AddTransient<IEventHandler<IEnumerable<JobAssignedEvent>>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<IEnumerable<JobCompletedEvent>>, SystemActivityEventHandler>();
+            builder.Services.AddTransient<IEventHandler<IEnumerable<JobFailedEvent>>, SystemActivityEventHandler>();
+
+
             // Validators
             builder.Services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();
             builder.Services.AddTransient<IValidator<CreateJobType>, CreateJobTypeValidator>();

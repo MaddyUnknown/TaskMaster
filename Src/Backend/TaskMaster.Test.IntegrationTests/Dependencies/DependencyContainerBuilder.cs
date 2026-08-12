@@ -85,6 +85,10 @@ namespace TaskMaster.Test.IntegrationTests.Dependencies
             services.AddTransient<IEventHandler<WorkerInactiveEvent>, SystemActivityEventHandler>();
             services.AddTransient<IEventHandler<WorkerRemovedEvent>, SystemActivityEventHandler>();
 
+            services.AddTransient<IEventHandler<IEnumerable<JobAssignedEvent>>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<IEnumerable<JobCompletedEvent>>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<IEnumerable<JobFailedEvent>>, SystemActivityEventHandler>();
+
             // Validators
             services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();
             services.AddTransient<IValidator<CreateJobType>, CreateJobTypeValidator>();

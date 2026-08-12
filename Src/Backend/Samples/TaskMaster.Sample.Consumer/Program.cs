@@ -17,8 +17,9 @@ services.AddTaskMasterConsumer(opts =>
 await using var serviceProvider = services.BuildServiceProvider();
 
 var cts = new CancellationTokenSource();
-Console.CancelKeyPress += (_, _) =>
+Console.CancelKeyPress += (_, e) =>
 {
+    e.Cancel = true;
     Console.WriteLine("\nShutting down...");
     cts.Cancel();
 };
