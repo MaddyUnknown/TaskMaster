@@ -3,6 +3,8 @@ using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Common;
+using TaskMaster.API.Models.Workers;
 
 namespace TaskMaster.API.Repositories
 {
@@ -19,9 +21,33 @@ namespace TaskMaster.API.Repositories
             return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).Where(w => w.WorkerPublicId == workerPublicId).FirstOrDefaultAsync();
         }
 
-        public async Task<IEnumerable<Worker>> GetAllWorkersAsync()
+        public async Task<PagedResult<Worker>> GetAllWorkersAsync(WorkerQuery query)
         {
-            return await _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).OrderByDescending(w => w.Id).ToListAsync();
+            var workersQuery = _context.Workers.Include(w => w.WorkerCapabilities).ThenInclude(wc => wc.JobType).AsQueryable();
+
+            if (query.Status.HasValue)
+            {
+                workersQuery = workersQuery.Where(w => w.Status == query.Status.Value);
+            }
+
+            if (query.Page == null || query.PageSize == null)
+            {
+                var all = await workersQuery.OrderByDescending(w => w.Id).ToListAsync();
+                return PagedResult<Worker>.Unpaged(all);
+            }
+
+            var page = query.Page.Value;
+            var pageSize = query.PageSize.Value;
+
+            var totalCount = await workersQuery.CountAsync();
+
+            var items = await workersQuery
+                .OrderByDescending(w => w.Id)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return PagedResult<Worker>.Create(items, page, pageSize, totalCount);
         }
 
         public async Task<Worker?> GetByWorkerNameAsync(string workerName, bool withLock = false)
@@ -56,6 +82,20 @@ namespace TaskMaster.API.Repositories
             return workers.FirstOrDefault();
         }
 
+        public async Task<WorkerStatusCounts> CountWorkersByStatusAsync()
+        {
+            var grouped = await _context.Workers
+                .GroupBy(w => w.Status)
+                .Select(g => new { Status = g.Key, Count = g.Count() })
+                .ToListAsync();
+
+            return new WorkerStatusCounts
+            {
+                Active = grouped.FirstOrDefault(x => x.Status == WorkerStatusEnum.Active)?.Count ?? 0,
+                InActive = grouped.FirstOrDefault(x => x.Status == WorkerStatusEnum.InActive)?.Count ?? 0
+            };
+        }
+
         public async Task<int> DeactivateExpiredWorkersAsync()
         {
             var currentDateTime = DateTime.Now;
@@ -70,6 +110,15 @@ namespace TaskMaster.API.Repositories
             ";
 
             return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
+        }
+
+        public async Task<List<Worker>> GetExpiredActiveWorkersAsync()
+        {
+            var currentDateTime = DateTime.Now;
+
+            return await _context.Workers
+                .Where(w => w.Status == WorkerStatusEnum.Active && w.WorkerExpiresAtTimestamp <= currentDateTime)
+                .ToListAsync();
         }
     }
 }

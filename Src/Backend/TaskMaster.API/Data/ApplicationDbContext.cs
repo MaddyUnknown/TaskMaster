@@ -14,6 +14,7 @@ namespace TaskMaster.API.Data
         public DbSet<WorkerCapability> WorkerCapabilities { get; set; }
         public DbSet<Job> Jobs { get; set; }
         public DbSet<JobType> JobTypes { get; set; }
+        public DbSet<SystemActivity> SystemActivities { get; set; }
 
         public ApplicationDbContext(DbContextOptions options, IEnumerable<ISaveInterceptor> saveInterceptors) : base(options)
         {
@@ -80,6 +81,10 @@ namespace TaskMaster.API.Data
                 .WithMany()
                 .HasForeignKey(wc => wc.JobTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // SystemActivity Setup
+            modelBuilder.Entity<SystemActivity>()
+                .HasIndex(a => a.CreatedDateTime);
         }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

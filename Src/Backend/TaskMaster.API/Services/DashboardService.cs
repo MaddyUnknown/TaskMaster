@@ -15,26 +15,29 @@ namespace TaskMaster.API.Services
             _dashboardQuery = dashboardQuery;
         }
 
-        public async Task<IEnumerable<ActivityItem>> GetRecentActivityAsync()
+        public async Task<IEnumerable<ActivityItem>> GetRecentActivityAsync(int totalItems)
         {
-            var recentJobs = await _dashboardQuery.GetRecentJobsAsync(10);
+            var recentActivities = await _dashboardQuery.GetRecentSystemActivitiesAsync(totalItems);
 
-            return recentJobs.Select(j =>
+            return recentActivities.Select(a =>
             {
-                ActivityStatus status = j.Status switch
+                ActivityStatus status = a.ActivityType switch
                 {
-                    JobStatusEnum.Completed => ActivityStatus.Success,
-                    JobStatusEnum.Failed => ActivityStatus.Error,
+                    ActivityType.JobCompleted => ActivityStatus.Success,
+                    ActivityType.JobFailed => ActivityStatus.Error,
+                    ActivityType.WorkerRegistered => ActivityStatus.Success,
+                    ActivityType.WorkerInactive => ActivityStatus.Error,
+                    ActivityType.WorkerRemoved => ActivityStatus.Error,
                     _ => ActivityStatus.Info
                 };
 
-                var message = $"{j.JobType.Name} job {j.Status.ToString()}";
-
                 return new ActivityItem
                 {
-                    Type = j.Status,
-                    Message = message,
-                    Timestamp = j.ModifyDateTime ?? j.CreatedDateTime,
+                    EntityType = a.EntityType,
+                    EntityId = a.EntityId,
+                    ActivityType = a.ActivityType,
+                    Message = a.Message,
+                    Timestamp = a.CreatedDateTime,
                     Status = status
                 };
             });

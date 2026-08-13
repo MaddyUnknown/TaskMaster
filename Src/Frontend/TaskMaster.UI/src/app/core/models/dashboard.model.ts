@@ -12,12 +12,29 @@ export enum HealthStatus {
   Degraded = 'degraded',
 }
 
+export enum EntityType {
+  Job = 'job',
+  Worker = 'worker',
+}
+
+export enum ActivityType {
+  JobCreated = 'job-created',
+  JobAssigned = 'job-assigned',
+  JobCompleted = 'job-completed',
+  JobFailed = 'job-failed',
+  WorkerRegistered = 'worker-registered',
+  WorkerInactive = 'worker-inactive',
+  WorkerRemoved = 'worker-removed',
+}
+
 export interface ComponentHealth {
   status: HealthStatus;
 }
 
 export interface DashboardActivity {
-  type: JobStatus;
+  entityType: EntityType;
+  entityId: string;
+  activityType: ActivityType;
   message: string;
   timestamp: string;
   status: ActivityStatus;

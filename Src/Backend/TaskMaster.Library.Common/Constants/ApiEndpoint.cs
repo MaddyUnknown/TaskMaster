@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Net;
 
 namespace TaskMaster.Library.Common.Constants
 {
@@ -15,8 +10,10 @@ namespace TaskMaster.Library.Common.Constants
         // Job
         internal const string CreateJob = "/api/jobs";
         internal static string PullJob(Guid workerId) => $"/api/jobs/pull?workerId={workerId}";
+        internal static string PullJobs(Guid workerId, int maxJobs) => $"/api/jobs/pull?workerId={workerId}&maxJobs={maxJobs}";
         internal static string CompleteJob(Guid jobId) => $"/api/jobs/{jobId}/complete";
         internal static string FailJob(Guid jobId) => $"/api/jobs/{jobId}/fail";
+        internal const string BatchUpdateJobStatus = "/api/jobs/status/bulk";
 
         // Worker
         internal const string RegisterWorker = "/api/workers/register";

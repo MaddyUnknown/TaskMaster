@@ -14,6 +14,10 @@ namespace TaskMaster.Library.Consumer.Constants
         internal static string JsonParsingError(Guid jobId, string jobTypeName, long jobTypeVersion) => $"Error while parsing payload for job id: '{jobId}' job type '{jobTypeName}' version '{jobTypeVersion}'";
         internal static string HeartbeatFailed() => "Heartbeat failed for worker.";
         internal static string PayloadTypeMissingAttribute(string fullName) => $"Payload type '{fullName}' must be decorated with JobTypeAttribute.";
+        internal static string WorkerHeartbeatFailed() => "Heartbeat failed for worker.";
+        internal static string WorkerAlreadyRunning() => "Worker already running.";
+        internal static string WorkerNotInitiated() => "Worker not initiated.";
+
 
     }
 }

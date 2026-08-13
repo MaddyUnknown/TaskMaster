@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Options;
 using TaskMaster.API.Configs;
+using TaskMaster.API.Events;
+using TaskMaster.API.Interfaces.Publisher;
 using TaskMaster.API.Interfaces.Repositories;
 
 namespace TaskMaster.API.BackgroundServices;
@@ -52,6 +54,9 @@ public class WorkerExpiryBackgroundService : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var workerRepository = scope.ServiceProvider.GetRequiredService<IWorkerRepository>();
         var jobRepository = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+        var eventPublisher = scope.ServiceProvider.GetRequiredService<IEventPublisher>();
+
+        var expiredWorkers = await workerRepository.GetExpiredActiveWorkersAsync();
 
         var deactivatedCount = await workerRepository.DeactivateExpiredWorkersAsync();
 
@@ -59,6 +64,15 @@ public class WorkerExpiryBackgroundService : BackgroundService
         {
             var unassignedCount = await jobRepository.UnassignJobsForInactiveWorkersAsync();
             _logger.LogInformation("Deactivated {DeactivatedCount} expired worker(s) and unassigned {UnassignedCount} job(s)", deactivatedCount, unassignedCount);
+
+            foreach (var worker in expiredWorkers)
+            {
+                await eventPublisher.PublishAsync(new WorkerInactiveEvent
+                {
+                    WorkerId = worker.WorkerPublicId,
+                    WorkerName = worker.WorkerName
+                }, ct);
+            }
         }
     }
 }

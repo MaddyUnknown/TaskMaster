@@ -13,6 +13,7 @@ public class DashboardQueryTests : IntegrationTestBase
     [Test]
     public async Task GetDashboardDataAsync_WhenDataSeeded_ShouldReturnCorrectCounts()
     {
+        // Arrange
         await ExecuteDbAsync(async db =>
         {
             var jobType = TestData.JobType();
@@ -40,8 +41,10 @@ public class DashboardQueryTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var query = new DashboardQuery(db);
 
+        // Act
         var result = await query.GetDashboardDataAsync();
 
+        // Assert
         Assert.Multiple(() =>
         {
             Assert.That(result.QueuedJobs, Is.EqualTo(1));
@@ -55,13 +58,19 @@ public class DashboardQueryTests : IntegrationTestBase
     }
 
     [Test]
-    public async Task GetRecentJobsAsync_ShouldReturnRecentJobs()
+    public async Task GetRecentSystemActivitiesAsync_ShouldReturnRecentActivities()
     {
+        // Arrange
         await ExecuteDbAsync(async db =>
         {
-            var jobType = TestData.JobType();
-            db.Add(jobType);
-            db.Add(new Job { JobPublicId = Guid.NewGuid(), JobType = jobType, Payload = "{}", Status = JobStatusEnum.Queued });
+            db.Add(new SystemActivity
+            {
+                EntityId = Guid.NewGuid(),
+                EntityType = EntityType.Job,
+                ActivityType = ActivityType.JobCreated,
+                Message = "Job 'email v1' created",
+                CreatedDateTime = DateTime.Now
+            });
             await db.SaveChangesAsync();
         });
 
@@ -69,9 +78,11 @@ public class DashboardQueryTests : IntegrationTestBase
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         var query = new DashboardQuery(db);
 
-        var jobs = await query.GetRecentJobsAsync(10);
+        // Act
+        var activities = await query.GetRecentSystemActivitiesAsync(10);
 
-        Assert.That(jobs, Has.Exactly(1).Items);
+        // Assert
+        Assert.That(activities, Has.Exactly(1).Items);
     }
 
 }

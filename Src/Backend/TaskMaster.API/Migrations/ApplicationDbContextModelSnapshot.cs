@@ -103,6 +103,40 @@ namespace TaskMaster.API.Migrations
                     b.ToTable("JobTypes");
                 });
 
+            modelBuilder.Entity("TaskMaster.API.Entities.SystemActivity", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("ActivityType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("EntityType")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ModifyDateTime")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedDateTime");
+
+                    b.ToTable("SystemActivities");
+                });
+
             modelBuilder.Entity("TaskMaster.API.Entities.Worker", b =>
                 {
                     b.Property<long>("Id")

@@ -32,9 +32,5 @@ public class SampleJobConsumer
             Console.Error.WriteLine($"\nError: {ex.Message}");
             Console.Error.WriteLine("Make sure the TaskMaster API is running and reachable.");
         }
-        finally
-        {
-            await worker.DisposeAsync();
-        }
     }
 }

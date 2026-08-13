@@ -22,7 +22,7 @@ public class SampleJobProducer
         while (!cancellationToken.IsCancellationRequested)
         {
             var isBurst = random.NextDouble() < 0.3;
-            var count = isBurst ? random.Next(3, 11) : 1;
+            var count = isBurst ? random.Next(3, 1001) : 1;
 
             for (var i = 0; i < count; i++)
             {

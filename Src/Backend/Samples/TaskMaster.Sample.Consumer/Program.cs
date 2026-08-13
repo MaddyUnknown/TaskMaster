@@ -12,13 +12,15 @@ var services = new ServiceCollection();
 services.AddTaskMasterConsumer(opts =>
 {
     opts.ApiBaseUrl = apiBaseUrl;
-    opts.PollingWaitIntervalMs = 500;
+    opts.MaxConcurrentHandlers = 20;
+    opts.PrefetchJobPerHandler = 3;
 });
 await using var serviceProvider = services.BuildServiceProvider();
 
 var cts = new CancellationTokenSource();
-Console.CancelKeyPress += (_, _) =>
+Console.CancelKeyPress += (_, e) =>
 {
+    e.Cancel = true;
     Console.WriteLine("\nShutting down...");
     cts.Cancel();
 };

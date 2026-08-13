@@ -25,7 +25,7 @@ namespace TaskMaster.API.Interfaces.Queries
     public interface IDashboardQuery
     {
         Task<DashboardData> GetDashboardDataAsync();
-        Task<List<Job>> GetRecentJobsAsync(int count);
+        Task<List<SystemActivity>> GetRecentSystemActivitiesAsync(int count);
         Task<IEnumerable<JobStatsItem>> GetJobStatsAsync();
     }
 }

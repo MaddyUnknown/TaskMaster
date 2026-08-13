@@ -1,0 +1,79 @@
+<div class="pagination">
+  <button
+    type="button"
+    class="pagination-btn"
+    [disabled]="!hasPrevious"
+    (click)="first()"
+    aria-label="First page"
+    title="First page"
+  >
+    <svg lucideChevronsLeft size="1.6rem"></svg>
+  </button>
+  <button
+    type="button"
+    class="pagination-btn"
+    [disabled]="!hasPrevious"
+    (click)="previous()"
+    aria-label="Previous page"
+    title="Previous page"
+  >
+    <svg lucideChevronLeft size="1.6rem"></svg>
+  </button>
+
+  <div class="pagination-pages">
+    @for (p of pages; track $index) {
+      @if (p === null) {
+        <span class="pagination-ellipsis">…</span>
+      } @else {
+        <button
+          type="button"
+          class="pagination-btn pagination-page"
+          [class.pagination-page-active]="p === page"
+          [disabled]="p === page"
+          (click)="goToPage(p)"
+          [attr.aria-label]="'Page ' + p"
+          [attr.aria-current]="p === page ? 'page' : null"
+        >
+          {{ p }}
+        </button>
+      }
+    }
+  </div>
+
+  <button
+    type="button"
+    class="pagination-btn"
+    [disabled]="!hasNext"
+    (click)="next()"
+    aria-label="Next page"
+    title="Next page"
+  >
+    <svg lucideChevronRight size="1.6rem"></svg>
+  </button>
+  <button
+    type="button"
+    class="pagination-btn"
+    [disabled]="!hasNext"
+    (click)="last()"
+    aria-label="Last page"
+    title="Last page"
+  >
+    <svg lucideChevronsRight size="1.6rem"></svg>
+  </button>
+
+  <div class="pagination-jump">
+    <input
+      #pageInput
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      class="pagination-jump-input"
+      placeholder="Go to"
+      aria-label="Go to page"
+      (keyup.enter)="goToInput(pageInput.value)"
+    />
+    <button type="button" class="pagination-btn" (click)="goToInput(pageInput.value)">
+      Go
+    </button>
+  </div>
+</div>

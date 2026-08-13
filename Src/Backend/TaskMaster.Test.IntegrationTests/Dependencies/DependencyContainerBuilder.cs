@@ -8,14 +8,19 @@ using System.Text;
 using System.Threading.Tasks;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
+using TaskMaster.API.Events;
+using TaskMaster.API.Handlers;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.EventHandler;
+using TaskMaster.API.Interfaces.Publisher;
 using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Models.Workers;
+using TaskMaster.API.Publishers;
 using TaskMaster.API.Queries;
 using TaskMaster.API.Repositories;
 using TaskMaster.API.Services;
@@ -39,6 +44,9 @@ namespace TaskMaster.Test.IntegrationTests.Dependencies
             var configuration = GetConfiguration();
 
             var services = new ServiceCollection();
+
+            // Logging
+            services.AddLogging();
 
             // Configuration
             services.AddSingleton(configuration);
@@ -66,6 +74,20 @@ namespace TaskMaster.Test.IntegrationTests.Dependencies
             services.AddTransient<IWorkerService, WorkerService>();
             services.AddTransient<IDashboardQuery, DashboardQuery>();
             services.AddTransient<IDashboardService, DashboardService>();
+
+            // Event infrastructure
+            services.AddTransient<IEventPublisher, EventPublisher>();
+            services.AddTransient<IEventHandler<JobCreatedEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<JobAssignedEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<JobCompletedEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<JobFailedEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<WorkerRegisteredEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<WorkerInactiveEvent>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<WorkerRemovedEvent>, SystemActivityEventHandler>();
+
+            services.AddTransient<IEventHandler<IEnumerable<JobAssignedEvent>>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<IEnumerable<JobCompletedEvent>>, SystemActivityEventHandler>();
+            services.AddTransient<IEventHandler<IEnumerable<JobFailedEvent>>, SystemActivityEventHandler>();
 
             // Validators
             services.AddTransient<IValidator<CreateJob>, CreateJobValidator>();

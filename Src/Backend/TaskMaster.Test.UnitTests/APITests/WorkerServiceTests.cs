@@ -3,13 +3,17 @@ using Moq;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Events;
 using TaskMaster.API.Exceptions;
 using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Publisher;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Services;
+using TaskMaster.API.Validation;
 using TaskMaster.Test.UnitTests.Data;
 
 namespace TaskMaster.Test.UnitTests.APITests;
@@ -22,10 +26,11 @@ public class WorkerServiceTests
     private Mock<IJobRepository> _jobRepository = null!;
     private Mock<IJobTypeRepository> _jobTypeRepository = null!;
     private Mock<IValidator<RegisterWorker>> _registerWorkerValidator = null!;
+    private Mock<IEventPublisher> _eventPublisher = null!;
     private IOptions<WorkerConfig> _workerOptions = null!;
 
     private WorkerService CreateService() =>
-        new(_unitOfWork.Object, _workerCrudRepository.Object, _workerRepository.Object, _jobRepository.Object, _jobTypeRepository.Object, _workerOptions, _registerWorkerValidator.Object);
+        new(_unitOfWork.Object, _workerCrudRepository.Object, _workerRepository.Object, _jobRepository.Object, _jobTypeRepository.Object, _workerOptions, _registerWorkerValidator.Object, _eventPublisher.Object);
 
     [SetUp]
     public void SetupMock()
@@ -39,6 +44,7 @@ public class WorkerServiceTests
         _registerWorkerValidator
             .Setup(v => v.Validate(It.IsAny<RegisterWorker>()))
             .Returns(Array.Empty<string>());
+        _eventPublisher = new(MockBehavior.Strict);
         _workerOptions = Options.Create(new WorkerConfig
         {
             HeartBeatIntervalSeconds = 15,
@@ -71,6 +77,10 @@ public class WorkerServiceTests
         _workerCrudRepository.Setup(r => r.Add(It.IsAny<Worker>()))
             .Callback<Worker>(w => persisted = w);
 
+        _eventPublisher
+            .Setup(p => p.PublishAsync(It.IsAny<WorkerRegisteredEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await CreateService().RegisterAsync(request);
 
@@ -87,6 +97,9 @@ public class WorkerServiceTests
         Assert.That(result.HeartBeatIntervalSeconds, Is.EqualTo(15));
 
         _workerCrudRepository.Verify(r => r.Add(It.IsAny<Worker>()), Times.Once);
+        _eventPublisher.Verify(p => p.PublishAsync(
+            It.Is<WorkerRegisteredEvent>(e => e.WorkerId == persisted!.WorkerPublicId && e.WorkerName == persisted.WorkerName),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -187,6 +200,10 @@ public class WorkerServiceTests
         _workerCrudRepository.Setup(r => r.Update(It.IsAny<Worker>()))
             .Callback<Worker>(w => updated = w);
 
+        _eventPublisher
+            .Setup(p => p.PublishAsync(It.IsAny<WorkerRegisteredEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await CreateService().RegisterAsync(request);
 
@@ -199,6 +216,9 @@ public class WorkerServiceTests
 
         _workerCrudRepository.Verify(r => r.Update(It.IsAny<Worker>()), Times.Once);
         _jobRepository.Verify(r => r.UnassignJobForWorkerIdAsync(inactiveWorker.Id), Times.Once);
+        _eventPublisher.Verify(p => p.PublishAsync(
+            It.Is<WorkerRegisteredEvent>(e => e.WorkerId == inactiveWorker.WorkerPublicId && e.WorkerName == inactiveWorker.WorkerName),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -217,6 +237,10 @@ public class WorkerServiceTests
             .Setup(r => r.UnassignJobForWorkerIdAsync(worker.Id))
             .ReturnsAsync(3);
 
+        _eventPublisher
+            .Setup(p => p.PublishAsync(It.IsAny<WorkerRemovedEvent>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
         // Act
         var result = await CreateService().RemoveAsync(worker.WorkerPublicId);
 
@@ -226,6 +250,9 @@ public class WorkerServiceTests
 
         _workerCrudRepository.Verify(r => r.Update(worker), Times.Once);
         _jobRepository.Verify(r => r.UnassignJobForWorkerIdAsync(worker.Id), Times.Once);
+        _eventPublisher.Verify(p => p.PublishAsync(
+            It.Is<WorkerRemovedEvent>(e => e.WorkerId == worker.WorkerPublicId && e.WorkerName == worker.WorkerName),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -302,17 +329,99 @@ public class WorkerServiceTests
     }
 
     [Test]
-    public async Task GetAllWorkersAsync_ShouldReturnWorkers()
+    public async Task GetAllWorkersAsync_WhenWorkersExist_ShouldReturnPagedWorkers()
     {
         // Arrange
         var workers = new[] { ServiceTestData.ActiveWorker(), ServiceTestData.ActiveWorker() };
-        _workerRepository.Setup(r => r.GetAllWorkersAsync()).ReturnsAsync(workers);
+        var query = new WorkerQuery { Page = 1, PageSize = 20 };
+        _workerRepository
+            .Setup(r => r.GetAllWorkersAsync(query))
+            .ReturnsAsync(PagedResult<Worker>.Create(workers, query.Page!.Value, query.PageSize!.Value, workers.Length));
 
         // Act
-        var result = await CreateService().GetAllWorkersAsync();
+        var result = await CreateService().GetAllWorkersAsync(query);
 
         // Assert
-        Assert.That(result, Has.Exactly(2).Items);
+        Assert.That(result.Items, Has.Exactly(2).Items);
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+        Assert.That(result.TotalPages, Is.EqualTo(1));
+
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(query), Times.Once);
+    }
+
+    [Test]
+    public async Task GetAllWorkersAsync_WhenStatusFilterProvided_ShouldPassQueryToRepository()
+    {
+        // Arrange
+        var query = new WorkerQuery { Page = 1, PageSize = 10, Status = WorkerStatusEnum.Active };
+        _workerRepository
+            .Setup(r => r.GetAllWorkersAsync(It.Is<WorkerQuery>(q => q.Status == WorkerStatusEnum.Active)))
+            .ReturnsAsync(PagedResult<Worker>.Create(Array.Empty<Worker>(), query.Page!.Value, query.PageSize!.Value, 0));
+
+        // Act
+        var result = await CreateService().GetAllWorkersAsync(query);
+
+        // Assert
+        Assert.That(result.Items, Is.Empty);
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(It.Is<WorkerQuery>(q => q.Status == WorkerStatusEnum.Active)), Times.Once);
+    }
+
+    [Test]
+    public async Task GetAllWorkersAsync_WhenInactiveFilterProvided_ShouldPassQueryToRepository()
+    {
+        // Arrange
+        var query = new WorkerQuery { Page = 1, PageSize = 10, Status = WorkerStatusEnum.InActive };
+        _workerRepository
+            .Setup(r => r.GetAllWorkersAsync(It.Is<WorkerQuery>(q => q.Status == WorkerStatusEnum.InActive)))
+            .ReturnsAsync(PagedResult<Worker>.Create(Array.Empty<Worker>(), query.Page!.Value, query.PageSize!.Value, 0));
+
+        // Act
+        var result = await CreateService().GetAllWorkersAsync(query);
+
+        // Assert
+        Assert.That(result.Items, Is.Empty);
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(It.Is<WorkerQuery>(q => q.Status == WorkerStatusEnum.InActive)), Times.Once);
+    }
+
+    [Test]
+    public async Task GetAllWorkersAsync_WhenNoPagingParamsProvided_ShouldReturnAllWorkersUnpaged()
+    {
+        // Arrange
+        var workers = new[] { ServiceTestData.ActiveWorker(), ServiceTestData.ActiveWorker() };
+        var query = new WorkerQuery();
+        _workerRepository
+            .Setup(r => r.GetAllWorkersAsync(query))
+            .ReturnsAsync(PagedResult<Worker>.Unpaged(workers));
+
+        // Act
+        var result = await CreateService().GetAllWorkersAsync(query);
+
+        // Assert
+        Assert.That(result.Items, Has.Exactly(2).Items);
+        Assert.That(result.Page, Is.EqualTo(1));
+        Assert.That(result.PageSize, Is.EqualTo(2));
+        Assert.That(result.TotalCount, Is.EqualTo(2));
+        Assert.That(result.TotalPages, Is.EqualTo(1));
+        Assert.That(result.HasPreviousPage, Is.False);
+        Assert.That(result.HasNextPage, Is.False);
+
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(query), Times.Once);
+    }
+
+    [Test]
+    public void GetAllWorkersAsync_WhenPageBelowOne_ShouldThrowValidationException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().GetAllWorkersAsync(new WorkerQuery { Page = 0 }));
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(It.IsAny<WorkerQuery>()), Times.Never);
+    }
+
+    [Test]
+    public void GetAllWorkersAsync_WhenPageSizeAboveMax_ShouldThrowValidationException()
+    {
+        // Act + Assert
+        Assert.ThrowsAsync<ValidationException>(async () => await CreateService().GetAllWorkersAsync(new WorkerQuery { PageSize = PaginationValidator.MaxPageSize + 1 }));
+        _workerRepository.Verify(r => r.GetAllWorkersAsync(It.IsAny<WorkerQuery>()), Times.Never);
     }
 
     [Test]
@@ -342,6 +451,25 @@ public class WorkerServiceTests
 
         // Assert
         Assert.That(result, Is.Null);
+    }
+
+    [Test]
+    public async Task GetWorkerStatusCountsAsync_ShouldReturnCountsFromRepository()
+    {
+        // Arrange
+        var counts = new WorkerStatusCounts { Active = 4, InActive = 1 };
+        _workerRepository
+            .Setup(r => r.CountWorkersByStatusAsync())
+            .ReturnsAsync(counts);
+
+        // Act
+        var result = await CreateService().GetWorkerStatusCountsAsync();
+
+        // Assert
+        Assert.That(result, Is.SameAs(counts));
+        Assert.That(result.Total, Is.EqualTo(5));
+
+        _workerRepository.Verify(r => r.CountWorkersByStatusAsync(), Times.Once);
     }
 
     [Test]

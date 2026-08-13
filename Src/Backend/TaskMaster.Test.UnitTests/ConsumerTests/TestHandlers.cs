@@ -8,7 +8,7 @@ internal sealed record EmailPayload(string Email, int Priority);
 
 internal class EmailHandler : IJobHandler<EmailPayload>
 {
-    public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+    public Task HandleAsync(EmailPayload payload)
         => Task.CompletedTask;
 }
 
@@ -16,7 +16,7 @@ internal class EmailCapturingHandler : IJobHandler<EmailPayload>
 {
     public EmailPayload? ReceivedPayload { get; private set; }
 
-    public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+    public Task HandleAsync(EmailPayload payload)
     {
         ReceivedPayload = payload;
         return Task.CompletedTask;
@@ -25,7 +25,7 @@ internal class EmailCapturingHandler : IJobHandler<EmailPayload>
 
 internal class EmailFailingHandler : IJobHandler<EmailPayload>
 {
-    public Task HandleAsync(EmailPayload payload, CancellationToken cancellationToken)
+    public Task HandleAsync(EmailPayload payload)
         => throw new InvalidOperationException("handler failed");
 }
 
@@ -36,6 +36,6 @@ internal sealed record UnattributedPayload
 
 internal class UnattributedHandler : IJobHandler<UnattributedPayload>
 {
-    public Task HandleAsync(UnattributedPayload payload, CancellationToken cancellationToken)
+    public Task HandleAsync(UnattributedPayload payload)
         => Task.CompletedTask;
 }

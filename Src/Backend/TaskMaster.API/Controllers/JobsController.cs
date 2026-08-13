@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
 using System;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
@@ -24,11 +25,19 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<JobDetails>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<PagedResult<JobDetails>>>> GetAll([FromQuery] JobQuery query)
         {
-            var jobs = await _jobService.GetAllJobsAsync();
-            _logger.LogInformation("Retrieved {JobCount} jobs", jobs.Count());
-            return Ok(ApiResponse<IEnumerable<JobDetails>>.Success(jobs));
+            var jobs = await _jobService.GetAllJobsAsync(query);
+            _logger.LogInformation("Retrieved {JobCount} jobs (page {Page}/{TotalPages})", jobs.Items.Count, jobs.Page, jobs.TotalPages);
+            return Ok(ApiResponse<PagedResult<JobDetails>>.Success(jobs));
+        }
+
+        [HttpGet("counts")]
+        public async Task<ActionResult<ApiResponse<JobStatusCounts>>> GetCounts()
+        {
+            var counts = await _jobService.GetJobStatusCountsAsync();
+            _logger.LogInformation("Retrieved job status counts (queued {Queued}, in-progress {InProgress}, completed {Completed}, failed {Failed})", counts.Queued, counts.InProgress, counts.Completed, counts.Failed);
+            return Ok(ApiResponse<JobStatusCounts>.Success(counts));
         }
 
         [HttpGet("{jobId}")]
@@ -45,11 +54,11 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("pull")]
-        public async Task<ActionResult<ApiResponse<JobDetails?>>> Pull([FromQuery] Guid workerId)
+        public async Task<ActionResult<ApiResponse<IEnumerable<JobDetails>>>> Pull([FromQuery] Guid workerId, [FromQuery] int maxJobs = 1)
         {
-            var job = await _jobService.GetNextWorkerJobsAsync(workerId);
-            _logger.LogInformation("Job pull for worker {WorkerId} returned {JobId}", workerId, job?.JobId);
-            return Ok(ApiResponse<JobDetails?>.Success(job));
+            var jobs = (await _jobService.GetNextWorkerJobsAsync(workerId, maxJobs)) ?? Enumerable.Empty<JobDetails>();
+            _logger.LogInformation("Job pull for worker {WorkerId} returned {JobCount} jobs", workerId, jobs.Count());
+            return Ok(ApiResponse<IEnumerable<JobDetails>>.Success(jobs));
         }
 
         [HttpPost("{jobId}/complete")]
@@ -66,6 +75,14 @@ namespace TaskMaster.API.Controllers
             var job = await _jobService.ChangeJobStatusAsync(jobId, JobStatusEnum.Failed, workerRef);
             _logger.LogInformation("Job {JobId} failed by worker {WorkerId}", jobId, workerRef.WorkerId);
             return Ok(ApiResponse<JobDetails>.Success(job));
+        }
+
+        [HttpPost("status/bulk")]
+        public async Task<ActionResult<ApiResponse<BulkUpdateJobStatusResponse>>> BulkUpdateJobStatus(BulkUpdateJobStatus request)
+        {
+            var result = await _jobService.ChangeJobStatusAsync(request);
+            _logger.LogInformation("Batch result for worker {WorkerId}: {UpdatedCount} jobs updated", request.WorkerId, result.UpdatedRecordCount);
+            return Ok(ApiResponse<BulkUpdateJobStatusResponse>.Success(result));
         }
 
         [HttpPost("")]

@@ -19,11 +19,19 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<WorkerDetails>>>> GetAll()
+        public async Task<ActionResult<ApiResponse<PagedResult<WorkerDetails>>>> GetAll([FromQuery] WorkerQuery query)
         {
-            var workers = await _workerService.GetAllWorkersAsync();
-            _logger.LogInformation("Retrieved {WorkerCount} workers", workers.Count());
-            return Ok(ApiResponse<IEnumerable<WorkerDetails>>.Success(workers));
+            var workers = await _workerService.GetAllWorkersAsync(query);
+            _logger.LogInformation("Retrieved {WorkerCount} workers (page {Page}/{TotalPages})", workers.Items.Count, workers.Page, workers.TotalPages);
+            return Ok(ApiResponse<PagedResult<WorkerDetails>>.Success(workers));
+        }
+
+        [HttpGet("counts")]
+        public async Task<ActionResult<ApiResponse<WorkerStatusCounts>>> GetCounts()
+        {
+            var counts = await _workerService.GetWorkerStatusCountsAsync();
+            _logger.LogInformation("Retrieved worker status counts (active {Active}, inactive {InActive})", counts.Active, counts.InActive);
+            return Ok(ApiResponse<WorkerStatusCounts>.Success(counts));
         }
 
         [HttpGet("{workerId}")]

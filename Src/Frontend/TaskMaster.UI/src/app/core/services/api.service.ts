@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, map, catchError, of } from 'rxjs';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, map, catchError, of, forkJoin } from 'rxjs';
 import {
   Job,
   JobStatus,
@@ -10,11 +10,18 @@ import {
   CreateJobRequest,
   CreateJobTypeRequest,
   ActivityStatus,
+  ActivityType,
   DashboardActivity,
+  EntityType,
   JobStatsItem,
   HealthStatus,
   SystemHealth,
   SystemMetrics,
+  PagedResult,
+  JobQuery,
+  WorkerQuery,
+  JobCounts,
+  WorkerCounts,
 } from '../models';
 
 interface ApiResponse<T> {
@@ -70,7 +77,9 @@ interface BackendMetrics {
 }
 
 interface BackendActivityItem {
-  type: JobStatus;
+  entityType: EntityType;
+  entityId: string;
+  activityType: ActivityType;
   message: string;
   timestamp: string;
   status: ActivityStatus;
@@ -93,54 +102,116 @@ interface BackendJobStatsItem {
   jobCount: number;
 }
 
+interface BackendPagedResult<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
+
+interface BackendJobCounts {
+  queued: number;
+  inProgress: number;
+  completed: number;
+  failed: number;
+  total: number;
+}
+
+interface BackendWorkerCounts {
+  active: number;
+  inactive: number;
+  total: number;
+}
+
+interface JobPage {
+  page: PagedResult<Job>;
+  counts: JobCounts;
+}
+
+interface WorkerPage {
+  page: PagedResult<Worker>;
+  counts: WorkerCounts;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private baseUrl = '/api';
 
   constructor(private http: HttpClient) {}
 
-  getJobs(): Observable<Job[]> {
+  private mapJob(j: BackendJob): Job {
+    return {
+      id: j.jobId,
+      jobTypeName: j.jobType.name,
+      jobTypeVersion: j.jobType.version,
+      payload: j.payload,
+      status: j.status,
+      workerId: j.assignedWorker?.workerId,
+      workerName: j.assignedWorker?.workerName,
+      createdDateTime: j.createdDateTime,
+      modifyDateTime: j.modifyDateTime,
+      completedDateTime: j.completedDateTime,
+      failDateTime: j.failDateTime,
+    };
+  }
+
+  private mapJobStatusForQuery(status?: JobStatus): string | undefined {
+    const map: Record<string, string> = {
+      [JobStatus.InProgress]: 'InProgress',
+    };
+    return status ? (map[status] ?? status) : undefined;
+  }
+
+  private mapWorkerStatusForQuery(status?: WorkerStatus): string | undefined {
+    const map: Record<string, string> = {
+      [WorkerStatus.Inactive]: 'InActive',
+    };
+    return status ? (map[status] ?? status) : undefined;
+  }
+
+  getJobs(query: JobQuery = {}): Observable<PagedResult<Job>> {
+    let params = new HttpParams();
+    if (query.page != null) params = params.set('page', query.page);
+    if (query.pageSize != null) params = params.set('pageSize', query.pageSize);
+    const status = this.mapJobStatusForQuery(query.status);
+    if (status != null) params = params.set('status', status);
+
     return this.http
-      .get<ApiResponse<BackendJob[]>>(`${this.baseUrl}/jobs`)
+      .get<ApiResponse<BackendPagedResult<BackendJob>>>(`${this.baseUrl}/jobs`, { params })
       .pipe(
-        map((res) =>
-          res.data.map((j) => ({
-            id: j.jobId,
-            jobTypeName: j.jobType.name,
-            jobTypeVersion: j.jobType.version,
-            payload: j.payload,
-            status: j.status,
-            workerId: j.assignedWorker?.workerId,
-            workerName: j.assignedWorker?.workerName,
-            createdDateTime: j.createdDateTime,
-            modifyDateTime: j.modifyDateTime,
-            completedDateTime: j.completedDateTime,
-            failDateTime: j.failDateTime,
-          })),
-        ),
+        map((res) => ({
+          items: res.data.items.map((j) => this.mapJob(j)),
+          page: res.data.page,
+          pageSize: res.data.pageSize,
+          totalCount: res.data.totalCount,
+          totalPages: res.data.totalPages,
+          hasPreviousPage: res.data.hasPreviousPage,
+          hasNextPage: res.data.hasNextPage,
+        })),
       );
+  }
+
+  getJobCounts(): Observable<JobCounts> {
+    return this.http
+      .get<ApiResponse<BackendJobCounts>>(`${this.baseUrl}/jobs/counts`)
+      .pipe(map((res) => res.data));
+  }
+
+  getJobsWithCounts(query: JobQuery = {}): Observable<JobPage> {
+    return forkJoin({
+      page: this.getJobs(query),
+      counts: this.getJobCounts(),
+    });
   }
 
   getJob(id: string): Observable<Job | undefined> {
     return this.http
       .get<ApiResponse<BackendJob>>(`${this.baseUrl}/jobs/${id}`)
       .pipe(
-        map((res) => {
-          const j = res.data;
-          return {
-            id: j.jobId,
-            jobTypeName: j.jobType.name,
-            jobTypeVersion: j.jobType.version,
-            payload: j.payload,
-            status: j.status,
-            workerId: j.assignedWorker?.workerId,
-            workerName: j.assignedWorker?.workerName,
-            createdDateTime: j.createdDateTime,
-            modifyDateTime: j.modifyDateTime,
-            completedDateTime: j.completedDateTime,
-            failDateTime: j.failDateTime,
-          };
-        }),
+        map((res) => this.mapJob(res.data)),
         catchError((err: HttpErrorResponse) => {
           if (err.status === 404) return of(undefined);
           throw err;
@@ -155,75 +226,73 @@ export class ApiService {
     };
     return this.http
       .post<ApiResponse<BackendJob>>(`${this.baseUrl}/jobs`, body)
-      .pipe(
-        map((res) => {
-          const j = res.data;
-          return {
-            id: j.jobId,
-            jobTypeName: j.jobType.name,
-            jobTypeVersion: j.jobType.version,
-            payload: j.payload,
-            status: j.status,
-            workerId: j.assignedWorker?.workerId,
-            workerName: j.assignedWorker?.workerName,
-            createdDateTime: j.createdDateTime,
-            modifyDateTime: j.modifyDateTime,
-            completedDateTime: j.completedDateTime,
-            failDateTime: j.failDateTime,
-          };
+      .pipe(map((res) => this.mapJob(res.data)));
+  }
+
+  private mapWorker(w: BackendWorker): Worker {
+    return {
+      id: w.workerId,
+      name: w.workerName,
+      status: w.status,
+      lastHeartbeatTimestamp: w.lastHeartBeatTimestamp,
+      createdDateTime: w.createdDateTime,
+      capabilities: w.jobTypeCapabilities
+        .map((c) => ({
+          jobTypeId: c.name,
+          jobTypeName: c.name,
+          jobTypeVersion: c.version,
+        }))
+        .sort((a, b) => {
+          const nameCompare = a.jobTypeName.localeCompare(b.jobTypeName);
+          if (nameCompare !== 0) {
+            return nameCompare;
+          }
+
+          return a.jobTypeVersion - b.jobTypeVersion;
         }),
+    };
+  }
+
+  getWorkers(query: WorkerQuery = {}): Observable<PagedResult<Worker>> {
+    let params = new HttpParams();
+    if (query.page != null) params = params.set('page', query.page);
+    if (query.pageSize != null) params = params.set('pageSize', query.pageSize);
+    const status = this.mapWorkerStatusForQuery(query.status);
+    if (status != null) params = params.set('status', status);
+
+    return this.http
+      .get<ApiResponse<BackendPagedResult<BackendWorker>>>(`${this.baseUrl}/workers`, { params })
+      .pipe(
+        map((res) => ({
+          items: res.data.items.map((w) => this.mapWorker(w)),
+          page: res.data.page,
+          pageSize: res.data.pageSize,
+          totalCount: res.data.totalCount,
+          totalPages: res.data.totalPages,
+          hasPreviousPage: res.data.hasPreviousPage,
+          hasNextPage: res.data.hasNextPage,
+        })),
       );
   }
 
-  getWorkers(): Observable<Worker[]> {
+  getWorkerCounts(): Observable<WorkerCounts> {
     return this.http
-      .get<ApiResponse<BackendWorker[]>>(`${this.baseUrl}/workers`)
-      .pipe(
-        map((res) =>
-          res.data.map((w) => ({
-            id: w.workerId,
-            name: w.workerName,
-            status: w.status,
-            lastHeartbeatTimestamp: w.lastHeartBeatTimestamp,
-            createdDateTime: w.createdDateTime,
-            capabilities: w.jobTypeCapabilities.map((c) => ({
-              jobTypeId: c.name,
-              jobTypeName: c.name,
-              jobTypeVersion: c.version,
-            })),
-          })),
-        ),
-      );
+      .get<ApiResponse<BackendWorkerCounts>>(`${this.baseUrl}/workers/counts`)
+      .pipe(map((res) => res.data));
+  }
+
+  getWorkersWithCounts(query: WorkerQuery = {}): Observable<WorkerPage> {
+    return forkJoin({
+      page: this.getWorkers(query),
+      counts: this.getWorkerCounts(),
+    });
   }
 
   getWorker(id: string): Observable<Worker | undefined> {
     return this.http
       .get<ApiResponse<BackendWorker>>(`${this.baseUrl}/workers/${id}`)
       .pipe(
-        map((res) => {
-          const w = res.data;
-          return {
-            id: w.workerId,
-            name: w.workerName,
-            status: w.status,
-            lastHeartbeatTimestamp: w.lastHeartBeatTimestamp,
-            createdDateTime: w.createdDateTime,
-            capabilities: w.jobTypeCapabilities
-              .map((c) => ({
-                jobTypeId: c.name,
-                jobTypeName: c.name,
-                jobTypeVersion: c.version,
-              }))
-              .sort((a, b) => {
-                const nameCompare = a.jobTypeName.localeCompare(b.jobTypeName);
-                if (nameCompare !== 0) {
-                  return nameCompare;
-                }
-
-                return a.jobTypeVersion - b.jobTypeVersion;
-              }),
-          };
-        }),
+        map((res) => this.mapWorker(res.data)),
         catchError((err: HttpErrorResponse) => {
           if (err.status === 404) return of(undefined);
           throw err;
@@ -233,10 +302,10 @@ export class ApiService {
 
   getJobTypes(): Observable<JobType[]> {
     return this.http
-      .get<ApiResponse<BackendJobType[]>>(`${this.baseUrl}/job-types`)
+      .get<ApiResponse<BackendPagedResult<BackendJobType>>>(`${this.baseUrl}/job-types`)
       .pipe(
-        map((res) => {
-          return res.data.map((j) => ({
+        map((res) =>
+          res.data.items.map((j) => ({
             id: j.name,
             name: j.name,
             version: j.version,
@@ -244,8 +313,8 @@ export class ApiService {
             schema: j.schema,
             createdDateTime: j.createdDateTime,
             modifyDateTime: j.modifyDateTime,
-          }));
-        }),
+          })),
+        ),
       );
   }
 
@@ -273,7 +342,9 @@ export class ApiService {
       .pipe(
         map((res) =>
           res.data.map((a) => ({
-            type: a.type,
+            entityType: a.entityType,
+            entityId: a.entityId,
+            activityType: a.activityType,
             message: a.message,
             timestamp: a.timestamp,
             status: a.status,

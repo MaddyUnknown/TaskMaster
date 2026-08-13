@@ -20,9 +20,9 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("activity")]
-        public async Task<ActionResult<ApiResponse<IEnumerable<ActivityItem>>>> GetRecentActivity()
+        public async Task<ActionResult<ApiResponse<IEnumerable<ActivityItem>>>> GetRecentActivity([FromQuery] int items = 10)
         {
-            var activities = await _dashboardService.GetRecentActivityAsync();
+            var activities = await _dashboardService.GetRecentActivityAsync(items);
             return Ok(ApiResponse<IEnumerable<ActivityItem>>.Success(activities));
         }
 

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TaskMaster.Library.Common.Models.JobType;
+﻿using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.Workers;
 
@@ -17,7 +12,9 @@ namespace TaskMaster.Library.Common.Interfaces.HttpClients
         Task<WorkerDetails> RemoveWorker(Guid workerId);
         Task<HeartbeatActionStatus> WorkerHeartBeat(Guid workerId);
         Task<JobDetails?> PullJob(Guid workerId);
+        Task<IEnumerable<JobDetails>> PullJobs(Guid workerId, int maxJobs);
         Task<JobDetails> CompleteJob(Guid jobId, Guid workerId);
         Task<JobDetails> FailJob(Guid jobId, Guid workerId);
+        Task<BulkUpdateJobStatusResponse> BulkUpdateJobStatus(BulkUpdateJobStatusRequest request);
     }
 }
