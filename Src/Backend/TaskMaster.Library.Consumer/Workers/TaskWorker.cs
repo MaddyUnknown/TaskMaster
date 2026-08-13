@@ -51,16 +51,17 @@ namespace TaskMaster.Library.Consumer.Workers
             var heartBeatCancelledToken =  SetupHeartBeat(cancellationToken);
             var processCancellationTokenSource  = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, heartBeatCancelledToken);
 
-            var capacity = _options.MaxConcurrentHandlers;
+            var channelCapacity = _options.MaxConcurrentHandlers * _options.PrefetchJobPerHandler;
+            var totalJobHandler = _options.MaxConcurrentHandlers;
 
             // Channels
-            var jobChannel = Channel.CreateBounded<JobDetails>(new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait });
-            var statusChannel = Channel.CreateBounded<JobDetails>(new BoundedChannelOptions(capacity) { FullMode = BoundedChannelFullMode.Wait });
+            var jobChannel = Channel.CreateBounded<JobDetails>(new BoundedChannelOptions(channelCapacity) { FullMode = BoundedChannelFullMode.Wait });
+            var statusChannel = Channel.CreateUnbounded<JobDetails>();
 
             // Readers and writer setup.
-            var jobReaderTask = StartJobReaderTask(jobChannel.Writer, capacity, processCancellationTokenSource.Token);
-            var jobHandlerTask = StartJobHandlerTask(jobChannel.Reader, capacity, statusChannel.Writer);
-            var statusSyncTask = StartStatusSyncTask(statusChannel.Reader, capacity, processCancellationTokenSource.Token);
+            var jobReaderTask = StartJobReaderTask(jobChannel.Writer, () => channelCapacity - jobChannel.Reader.Count, processCancellationTokenSource.Token);
+            var jobHandlerTask = StartJobHandlerTask(jobChannel.Reader, totalJobHandler, statusChannel.Writer);
+            var statusSyncTask = StartStatusSyncTask(statusChannel.Reader, channelCapacity, processCancellationTokenSource.Token);
 
             // Wait for pending queue processing completion
             await Task.WhenAll(jobReaderTask, jobHandlerTask, statusSyncTask);
@@ -141,7 +142,7 @@ namespace TaskMaster.Library.Consumer.Workers
 
         #region Processing Pipeline Tasks
         
-        private async Task StartJobReaderTask(ChannelWriter<JobDetails> output, int jobQueueSize, CancellationToken ct)
+        private async Task StartJobReaderTask(ChannelWriter<JobDetails> output, Func<int> availableCapacityFn, CancellationToken ct)
         {
             using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(_options.PollingWaitIntervalMs));
 
@@ -151,7 +152,10 @@ namespace TaskMaster.Library.Consumer.Workers
                 {
                     try
                     {
-                        var jobs = await _httpClient.PullJobs(_workerDetails!.WorkerId, jobQueueSize);
+                        var availableCapacity = availableCapacityFn();
+                        if (availableCapacity <= 0) continue;
+
+                        var jobs = await _httpClient.PullJobs(_workerDetails!.WorkerId, availableCapacity);
 
                         if (jobs != null && jobs.Count() > 0)
                         {

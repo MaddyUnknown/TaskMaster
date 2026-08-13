@@ -5,6 +5,7 @@
         public string ApiBaseUrl { get; set; } = string.Empty;
 
         public int MaxConcurrentHandlers { get; set; } = 5;
+        public int PrefetchJobPerHandler { get; set; } = 1;
         public int MaxResultRetries { get; set; } = 5;
 
         public int PollingWaitIntervalMs { get; set; } = 500;

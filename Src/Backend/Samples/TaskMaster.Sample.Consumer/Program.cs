@@ -13,6 +13,7 @@ services.AddTaskMasterConsumer(opts =>
 {
     opts.ApiBaseUrl = apiBaseUrl;
     opts.MaxConcurrentHandlers = 20;
+    opts.PrefetchJobPerHandler = 3;
 });
 await using var serviceProvider = services.BuildServiceProvider();
 
