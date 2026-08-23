@@ -2,7 +2,8 @@
   <div class="sidebar-header">
     <div class="sidebar-logo">
       <div class="logo-icon">
-        <svg lucideLayoutGrid size="2.4rem"></svg>
+        <!-- <svg lucideLayoutGrid size="2.4rem"></svg> -->
+        <img src="/img/task-master-logo.svg" alt="Logo" />
       </div>
       @if (!collapsed) {
         <span class="sidebar-brand">TaskMaster</span>
@@ -16,11 +17,15 @@
         class="nav-item"
         [routerLink]="item.route"
         routerLinkActive="nav-item-active"
-        [routerLinkActiveOptions]="{ exact: item.route === navService.routes.dashboard }"
+        [routerLinkActiveOptions]="{
+          exact: item.route === navService.routes.dashboard,
+        }"
         [attr.aria-label]="item.label"
       >
         <span class="nav-icon">
-          <ng-container *ngComponentOutlet="item.icon; inputs: { size: '2rem' }" />
+          <ng-container
+            *ngComponentOutlet="item.icon; inputs: { size: '2rem' }"
+          />
         </span>
         @if (!collapsed) {
           <span class="nav-label">{{ item.label }}</span>

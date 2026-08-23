@@ -22,5 +22,11 @@ namespace TaskMaster.Library.Common.Constants
             public static readonly string Completed = "completed";
             public static readonly string Failed = "failed";
         }
+
+        public static class AuthModeEnum
+        {
+            public const string None = "none";
+            public const string Oidc = "oidc";
+        }
     }
 }

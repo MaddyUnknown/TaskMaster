@@ -1,8 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
-using TaskMaster.Library.Common.Caches;
+using Moq;
 using TaskMaster.Library.Common.Configs;
+using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.DependencyInjection;
 using TaskMaster.Library.Common.Interfaces.Caches;
+using TaskMaster.Library.Common.Interfaces.HttpClients;
+using TaskMaster.Library.Common.Models.Auth;
 
 namespace TaskMaster.Test.UnitTests.CommonTests;
 
@@ -11,7 +14,16 @@ public class InMemoryCacheTests
     private ServiceProvider BuildProvider()
     {
         var services = new ServiceCollection();
-        services.AddTaskMasterCommon(new ApiConfig { ApiBaseUrl = "https://test/" });
+        
+        var apiHttpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+
+        apiHttpClient.Setup(x => x.GetAuthConfig()).ReturnsAsync(new AuthConfigDetails
+        {
+            Mode = EnumConstants.AuthModeEnum.None
+        });
+
+        services.AddSingleton<IApiHttpClient>(apiHttpClient.Object);
+        services.AddTaskMasterCommon(new AppConfig { ApiBaseUrl = "https://test/" });
         return services.BuildServiceProvider();
     }
 

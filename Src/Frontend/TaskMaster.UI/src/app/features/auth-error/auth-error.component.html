@@ -1,0 +1,20 @@
+<div class="auth-error">
+  <div class="auth-error-content">
+    <div class="auth-error-icon">
+      <svg lucideAlertCircle size="2rem"></svg>
+    </div>
+    <h2 class="auth-error-title">Sign in failed</h2>
+    <p class="auth-error-description">
+      The sign-in could not be completed. This usually happens when the
+      authentication provider rejects the request or the session could not be
+      established. Check the browser console for details.
+    </p>
+    @if (errorMessage) {
+      <pre class="auth-error-details">Error: {{ errorMessage }}</pre>
+    }
+    <a class="auth-error-link" routerLink="/">
+      <svg lucideRefreshCcw size="1.4rem"></svg>
+      Try again
+    </a>
+  </div>
+</div>

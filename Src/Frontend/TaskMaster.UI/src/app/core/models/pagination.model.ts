@@ -34,6 +34,6 @@ export interface JobCounts {
 
 export interface WorkerCounts {
   active: number;
-  inactive: number;
+  inActive: number;
   total: number;
 }

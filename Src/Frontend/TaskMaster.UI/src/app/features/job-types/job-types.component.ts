@@ -1,4 +1,5 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
+import { Subject, takeUntil } from 'rxjs';
 import { LucidePlus } from '@lucide/angular';
 import { ApiService } from '../../core/services/api.service';
 import { ContentComponent } from '../../shared/layout/content/content.component';
@@ -9,6 +10,8 @@ import { JobType, CreateJobTypeRequest } from '../../core/models';
 import { GroupInfo } from './job-types.models';
 import { JobTypeCardComponent } from './job-type-card/job-type-card.component';
 import { JobTypeFormDialogComponent } from './job-type-form-dialog/job-type-form-dialog.component';
+import { AUTH_SERVICE, AuthService } from '../../core/auth/auth.service';
+import { UserPermission } from '../../core/auth/auth.models';
 
 @Component({
   selector: 'app-job-types',
@@ -25,10 +28,11 @@ import { JobTypeFormDialogComponent } from './job-type-form-dialog/job-type-form
   templateUrl: './job-types.component.html',
   styleUrl: './job-types.component.css',
 })
-export class JobTypesComponent implements OnInit {
+export class JobTypesComponent implements OnInit, OnDestroy {
   jobTypes: JobType[] = [];
   groups: GroupInfo[] = [];
   loading = true;
+  canCreateJobTypes = false;
 
   showCreateDialog = false;
   dialogMode: 'create' | 'add-version' = 'create';
@@ -40,10 +44,28 @@ export class JobTypesComponent implements OnInit {
     schema: string;
   } | null = null;
 
-  constructor(private api: ApiService) {}
+  private destroy$ = new Subject<void>();
+
+  constructor(
+    private api: ApiService,
+    @Inject(AUTH_SERVICE) private authService: AuthService,
+  ) {}
 
   ngOnInit() {
+    this.authService.permissions$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(
+        () =>
+          (this.canCreateJobTypes = this.authService.hasPermission(
+            UserPermission.createJobTypes,
+          )),
+      );
     this.refreshJobTypes();
+  }
+
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   refreshJobTypes() {

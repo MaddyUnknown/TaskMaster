@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Microsoft.Extensions.Options;
+﻿using Microsoft.Extensions.Options;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -10,66 +9,71 @@ using TaskMaster.Library.Common.Models.Common;
 using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.Workers;
+using TaskMaster.Library.Common.Models.Auth;
 
 namespace TaskMaster.Library.Common.HttpClients
 {
     internal class ApiHttpClient : IApiHttpClient
     {
-        private IOptions<ApiConfig> _apiConfigOption;
-        private HttpClient _httpClient;
+        private IOptions<AppConfig> _appConfigOption;
+        private IHttpClientFactory _httpClientFactory;
 
-        public ApiHttpClient(IOptions<ApiConfig> apiConfigOption)
-            : this(apiConfigOption, new HttpClient())
+        public ApiHttpClient(IOptions<AppConfig> appConfigOption, IHttpClientFactory httpClientFactory)
         {
+            _appConfigOption = appConfigOption;
+            _httpClientFactory = httpClientFactory;
         }
 
-        public ApiHttpClient(IOptions<ApiConfig> apiConfigOption, HttpClient httpClient)
+        public async Task<AuthConfigDetails?> GetAuthConfig()
         {
-            _apiConfigOption = apiConfigOption;
-            _httpClient = httpClient;
+            var httpClient = CreateHttpClient("public");
+            var endpoint = ApiEndpoint.GetAuthConfig();
+            var response = await SendAsync(endpoint, () => httpClient.GetAsync(endpoint));
+            var wrapper = await EnsureSuccessAsync<AuthConfigDetails>(response);
+            return wrapper.Data;
         }
 
         public async Task<JobTypeDetails?> GetJobType(GetJobTypeRequest request)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.GetJobType(request.JobTypeName, request.JobTypeVersion);
-            var response = await SendAsync(endpoint, () => _httpClient.GetAsync(endpoint));
+            var response = await SendAsync(endpoint, () => httpClient.GetAsync(endpoint));
             var wrapper = await EnsureSuccessAsync<JobTypeDetails[]>(response);
             return wrapper.Data?.FirstOrDefault();
         }
 
         public async Task<JobDetails> CreateJob(CreateJobRequest request)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.CreateJob;
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, request));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, request));
             var wrapper = await EnsureSuccessAsync<JobDetails>(response);
             return wrapper.Data!;
         }
 
         public async Task<RegisterWorkerResponse> RegisterWorker(RegisterWorker worker)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.RegisterWorker;
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, worker));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, worker));
             var wrapper = await EnsureSuccessAsync<RegisterWorkerResponse>(response);
             return wrapper.Data!;
         }
 
         public async Task<WorkerDetails> RemoveWorker(Guid workerId)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.RemoveWorker(workerId);
-            var response = await SendAsync(endpoint, () => _httpClient.DeleteAsync(endpoint));
+            var response = await SendAsync(endpoint, () => httpClient.DeleteAsync(endpoint));
             var wrapper = await EnsureSuccessAsync<WorkerDetails>(response);
             return wrapper.Data!;
         }
 
         public async Task<JobDetails?> PullJob(Guid workerId)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.PullJob(workerId);
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsync(endpoint, null));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsync(endpoint, null));
             if (response.StatusCode == HttpStatusCode.NoContent) return null;
             var wrapper = await EnsureSuccessAsync<JobDetails?>(response);
             return wrapper.Data;
@@ -77,57 +81,60 @@ namespace TaskMaster.Library.Common.HttpClients
 
         public async Task<IEnumerable<JobDetails>> PullJobs(Guid workerId, int maxJobs)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.PullJobs(workerId, maxJobs);
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsync(endpoint, null));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsync(endpoint, null));
             var wrapper = await EnsureSuccessAsync<IEnumerable<JobDetails>>(response);
             return wrapper.Data!;
         }
 
         public async Task<JobDetails> CompleteJob(Guid jobId, Guid workerId)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.CompleteJob(jobId);
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
             var wrapper = await EnsureSuccessAsync<JobDetails>(response);
             return wrapper.Data!;
         }
 
         public async Task<JobDetails> FailJob(Guid jobId, Guid workerId)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.FailJob(jobId);
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, new { WorkerId = workerId }));
             var wrapper = await EnsureSuccessAsync<JobDetails>(response);
             return wrapper.Data!;
         }
 
         public async Task<BulkUpdateJobStatusResponse> BulkUpdateJobStatus(BulkUpdateJobStatusRequest request)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.BatchUpdateJobStatus;
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, request));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, request));
             var wrapper = await EnsureSuccessAsync<BulkUpdateJobStatusResponse>(response);
             return wrapper.Data!;
         }
 
         public async Task<HeartbeatActionStatus> WorkerHeartBeat(Guid workerId)
         {
-            EnsureBaseAddress();
+            var httpClient = CreateHttpClient();
             var endpoint = ApiEndpoint.WorkerHeartBeat(workerId);
-            var response = await SendAsync(endpoint, () => _httpClient.PostAsJsonAsync(endpoint, string.Empty));
+            var response = await SendAsync(endpoint, () => httpClient.PostAsJsonAsync(endpoint, string.Empty));
             var wrapper = await EnsureSuccessAsync<HeartbeatActionStatus>(response);
             return wrapper.Data!;
         }
 
-        private void EnsureBaseAddress()
+        private HttpClient CreateHttpClient(string name="protected")
         {
-            if (_httpClient.BaseAddress != null) return;
+            var httpClient = _httpClientFactory.CreateClient(name);
+            if (httpClient == null) throw new InvalidOperationException(ErrorMessage.HttpClientCreateFailed());
 
-            if (string.IsNullOrWhiteSpace(_apiConfigOption.Value.ApiBaseUrl))
+            if (string.IsNullOrWhiteSpace(_appConfigOption.Value.ApiBaseUrl))
                 throw new InvalidOperationException(ErrorMessage.ApiBaseUrlRequired());
 
-            _httpClient.BaseAddress = new Uri(_apiConfigOption.Value.ApiBaseUrl);
+            httpClient.BaseAddress = new Uri(_appConfigOption.Value.ApiBaseUrl);
+
+            return httpClient;
         }
 
         private static async Task<HttpResponseMessage> SendAsync(

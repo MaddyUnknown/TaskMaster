@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TaskMaster.API.Auth;
 using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
@@ -20,6 +21,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("activity")]
+        [RequirePermission(AuthPermissions.ReadDashboard)]
         public async Task<ActionResult<ApiResponse<IEnumerable<ActivityItem>>>> GetRecentActivity([FromQuery] int items = 10)
         {
             var activities = await _dashboardService.GetRecentActivityAsync(items);
@@ -27,6 +29,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("metrics")]
+        [RequirePermission(AuthPermissions.ReadDashboard)]
         public async Task<ActionResult<ApiResponse<SystemMetrics>>> GetSystemMetrics()
         {
             var metrics = await _dashboardService.GetSystemMetricsAsync();
@@ -34,6 +37,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("job-stats")]
+        [RequirePermission(AuthPermissions.ReadDashboard)]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobStatsItem>>>> GetJobStats()
         {
             var stats = await _dashboardService.GetJobStatsAsync();
@@ -41,6 +45,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("health")]
+        [RequirePermission(AuthPermissions.ReadDashboard)]
         public async Task<ActionResult<ApiResponse<SystemHealth>>> GetSystemHealth()
         {
             var health = await _dashboardService.GetSystemHealthAsync();

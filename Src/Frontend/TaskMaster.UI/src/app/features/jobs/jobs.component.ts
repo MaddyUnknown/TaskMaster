@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';
@@ -15,6 +15,8 @@ import { ButtonComponent } from '../../shared/components/button/button.component
 import { PaginationComponent } from '../../shared/components/pagination/pagination.component';
 import { Job, JobStatus, CreateJobRequest, JobCounts } from '../../core/models';
 import { CreateJobDialogComponent } from './create-job-dialog/create-job-dialog.component';
+import { AUTH_SERVICE, AuthService } from '../../core/auth/auth.service';
+import { UserPermission } from '../../core/auth/auth.models';
 
 @Component({
   selector: 'app-jobs',
@@ -36,7 +38,13 @@ import { CreateJobDialogComponent } from './create-job-dialog/create-job-dialog.
 })
 export class JobsComponent implements OnInit, OnDestroy {
   jobs: Job[] = [];
-  counts: JobCounts = { queued: 0, inProgress: 0, completed: 0, failed: 0, total: 0 };
+  counts: JobCounts = {
+    queued: 0,
+    inProgress: 0,
+    completed: 0,
+    failed: 0,
+    total: 0,
+  };
   loading = true;
   activeFilter = 'all';
   page = 1;
@@ -45,22 +53,38 @@ export class JobsComponent implements OnInit, OnDestroy {
   totalPages = 0;
   showCreateDialog = false;
   submitting = false;
+  canCreateJobs = false;
 
   private destroy$ = new Subject<void>();
 
-  constructor(private api: ApiService) {}
+  constructor(
+    private api: ApiService,
+    @Inject(AUTH_SERVICE) private authService: AuthService,
+  ) {}
 
   get filterTabs() {
     return [
       { label: 'All', value: 'all', count: this.counts.total },
       { label: 'Queued', value: 'queued', count: this.counts.queued },
-      { label: 'In Progress', value: 'inProgress', count: this.counts.inProgress },
+      {
+        label: 'In Progress',
+        value: 'inProgress',
+        count: this.counts.inProgress,
+      },
       { label: 'Completed', value: 'completed', count: this.counts.completed },
       { label: 'Failed', value: 'failed', count: this.counts.failed },
     ];
   }
 
   ngOnInit() {
+    this.authService.permissions$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(
+        () =>
+          (this.canCreateJobs = this.authService.hasPermission(
+            UserPermission.createJob,
+          )),
+      );
     this.loadJobs();
   }
 
@@ -70,7 +94,10 @@ export class JobsComponent implements OnInit, OnDestroy {
   }
 
   private loadJobs() {
-    const status = this.activeFilter === 'all' ? undefined : this.mapFilterToStatus(this.activeFilter);
+    const status =
+      this.activeFilter === 'all'
+        ? undefined
+        : this.mapFilterToStatus(this.activeFilter);
     this.api
       .getJobsWithCounts({ page: this.page, pageSize: this.pageSize, status })
       .pipe(takeUntil(this.destroy$))

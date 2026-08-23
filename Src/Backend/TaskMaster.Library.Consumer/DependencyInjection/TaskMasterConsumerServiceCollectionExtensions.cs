@@ -15,9 +15,18 @@ namespace TaskMaster.Library.Consumer.DependencyInjection
             var options = new TaskMasterConsumerOptions();
             configureOptions(options);
 
-            services.AddTaskMasterCommon(new ApiConfig
+            services.AddTaskMasterCommon(new AppConfig
             {
-                ApiBaseUrl = options.ApiBaseUrl
+                ApiBaseUrl = options.ApiBaseUrl,
+                Auth = new AuthConfig
+                {
+                    Oidc = options.Auth.Oidc == null ? null : new OidcConfig
+                    {
+                        ClientId = options.Auth.Oidc.ClientId,
+                        ClientSecret = options.Auth.Oidc.ClientSecret,
+                        RequestedScope = "jobs:pull jobs:report workers:register workers:heartbeat workers:remove jobtypes:read"
+                    }
+                }
             });
 
             services.AddSingleton(Options.Create(options));

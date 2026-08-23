@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TaskMaster.API.Auth;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.JobTypes;
@@ -19,6 +20,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("")]
+        [RequirePermission(AuthPermissions.CreateJobTypes)]
         public async Task<ActionResult<ApiResponse<JobTypeDetails>>> Create(CreateJobType createJob)
         {
             var jobType = await _jobTypeService.CreateJobTypeAsync(createJob);
@@ -27,6 +29,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
+        [RequirePermission(AuthPermissions.ReadJobTypes)]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobTypeDetails>>>> GetAll([FromQuery] string? name, [FromQuery] long? version, [FromQuery] PaginationQuery query)
         {
             if (name != null && version.HasValue)
