@@ -61,7 +61,7 @@ namespace TaskMaster.API
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
             {
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-                options.EnableDetailedErrors();
+                //options.EnableDetailedErrors();
             });
 
             // Authentication & authorization (pluggable: None | Oidc)

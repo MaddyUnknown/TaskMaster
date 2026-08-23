@@ -185,3 +185,34 @@ img {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border) transparent;
 }
+
+/* Screen loader style */
+#initial-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: var(--color-bg);
+
+  opacity: 1;
+  visibility: visible;
+
+  transition:
+    opacity 400ms ease,
+    visibility 400ms ease;
+}
+
+#initial-loader.loaded {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#initial-loader dotlottie-wc {
+  width: 32rem;
+  height: 32rem;
+}

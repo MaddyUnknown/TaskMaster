@@ -2,6 +2,7 @@ import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
 import { AppConfig, AuthConfig } from './app/core/models';
+import '@lottiefiles/dotlottie-wc';
 
 function loadAppConfig(): Promise<AppConfig> {
   return fetch('/app-config.json').then((res) => res.json());

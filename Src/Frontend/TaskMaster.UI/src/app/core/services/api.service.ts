@@ -126,7 +126,7 @@ interface BackendJobCounts {
 
 interface BackendWorkerCounts {
   active: number;
-  inactive: number;
+  inActive: number;
   total: number;
 }
 

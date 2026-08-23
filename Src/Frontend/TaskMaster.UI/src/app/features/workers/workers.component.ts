@@ -28,7 +28,7 @@ import { Worker, WorkerStatus, WorkerCounts } from '../../core/models';
 })
 export class WorkersComponent implements OnInit, OnDestroy {
   workers: Worker[] = [];
-  counts: WorkerCounts = { active: 0, inactive: 0, total: 0 };
+  counts: WorkerCounts = { active: 0, inActive: 0, total: 0 };
   loading = true;
   activeFilter = 'all';
   page = 1;
@@ -44,7 +44,7 @@ export class WorkersComponent implements OnInit, OnDestroy {
     return [
       { label: 'All', value: 'all', count: this.counts.total },
       { label: 'Active', value: 'active', count: this.counts.active },
-      { label: 'Inactive', value: 'inactive', count: this.counts.inactive },
+      { label: 'Inactive', value: 'inactive', count: this.counts.inActive },
     ];
   }
 
@@ -58,9 +58,16 @@ export class WorkersComponent implements OnInit, OnDestroy {
   }
 
   private loadWorkers() {
-    const status = this.activeFilter === 'all' ? undefined : this.mapFilterToStatus(this.activeFilter);
+    const status =
+      this.activeFilter === 'all'
+        ? undefined
+        : this.mapFilterToStatus(this.activeFilter);
     this.api
-      .getWorkersWithCounts({ page: this.page, pageSize: this.pageSize, status })
+      .getWorkersWithCounts({
+        page: this.page,
+        pageSize: this.pageSize,
+        status,
+      })
       .pipe(takeUntil(this.destroy$))
       .subscribe(({ page, counts }) => {
         this.workers = page.items;

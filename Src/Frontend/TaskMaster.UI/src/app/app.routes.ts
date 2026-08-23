@@ -12,7 +12,7 @@ import { authGuard } from './core/auth/auth.guard';
 import { AuthConfig, AuthMode } from './core/models';
 
 export function getRoutes(authConfig: AuthConfig): Routes {
-  const routers = [...ROUTES];
+  let routers = [];
   if (authConfig.mode !== AuthMode.None) {
     routers.push({
       path: 'auth-error',
@@ -20,6 +20,8 @@ export function getRoutes(authConfig: AuthConfig): Routes {
       title: 'Sign in failed - TaskMaster',
     });
   }
+
+  routers = [...routers, ...ROUTES];
 
   return routers;
 }
