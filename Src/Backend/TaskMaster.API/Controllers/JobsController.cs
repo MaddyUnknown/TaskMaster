@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using TaskMaster.API.Auth;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Exceptions;
@@ -25,6 +26,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
+        [RequirePermission(AuthPermissions.ReadJobs)]
         public async Task<ActionResult<ApiResponse<PagedResult<JobDetails>>>> GetAll([FromQuery] JobQuery query)
         {
             var jobs = await _jobService.GetAllJobsAsync(query);
@@ -33,6 +35,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("counts")]
+        [RequirePermission(AuthPermissions.ReadJobStats)]
         public async Task<ActionResult<ApiResponse<JobStatusCounts>>> GetCounts()
         {
             var counts = await _jobService.GetJobStatusCountsAsync();
@@ -41,6 +44,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("{jobId}")]
+        [RequirePermission(AuthPermissions.ReadJobs)]
         public async Task<ActionResult<ApiResponse<JobDetails?>>> GetById(Guid jobId)
         {
             var job = await _jobService.GetJobByPublicIdAsync(jobId);
@@ -54,6 +58,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("pull")]
+        [RequirePermission(AuthPermissions.PullJobs)]
         public async Task<ActionResult<ApiResponse<IEnumerable<JobDetails>>>> Pull([FromQuery] Guid workerId, [FromQuery] int maxJobs = 1)
         {
             var jobs = (await _jobService.GetNextWorkerJobsAsync(workerId, maxJobs)) ?? Enumerable.Empty<JobDetails>();
@@ -62,6 +67,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("{jobId}/complete")]
+        [RequirePermission(AuthPermissions.ReportJobs)]
         public async Task<ActionResult<ApiResponse<JobDetails>>> Complete(Guid jobId, WorkerIdRef workerRef)
         {
             var job = await _jobService.ChangeJobStatusAsync(jobId, JobStatusEnum.Completed, workerRef);
@@ -70,6 +76,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("{jobId}/fail")]
+        [RequirePermission(AuthPermissions.ReportJobs)]
         public async Task<ActionResult<ApiResponse<JobDetails>>> Fail(Guid jobId, WorkerIdRef workerRef)
         {
             var job = await _jobService.ChangeJobStatusAsync(jobId, JobStatusEnum.Failed, workerRef);
@@ -78,6 +85,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("status/bulk")]
+        [RequirePermission(AuthPermissions.ReportJobs)]
         public async Task<ActionResult<ApiResponse<BulkUpdateJobStatusResponse>>> BulkUpdateJobStatus(BulkUpdateJobStatus request)
         {
             var result = await _jobService.ChangeJobStatusAsync(request);
@@ -86,6 +94,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("")]
+        [RequirePermission(AuthPermissions.CreateJob)]
         public async Task<ActionResult<ApiResponse<JobDetails>>> Create(CreateJob jobCreateRequest)
         {
             var job = await _jobService.CreateAsync(jobCreateRequest);

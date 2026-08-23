@@ -21,8 +21,8 @@ export class LayoutComponent implements OnInit {
 
   ngOnInit(): void {
     this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe(event => this.routeState = (event as NavigationEnd).url);
+      .pipe(filter((event) => event instanceof NavigationEnd))
+      .subscribe((event) => (this.routeState = (event as NavigationEnd).url));
   }
 
   onCollapsedChange(collapsed: boolean) {

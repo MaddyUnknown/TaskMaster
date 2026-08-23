@@ -7,7 +7,7 @@
     app-button
     content-actions
     variant="primary"
-    [disabled]="loading"
+    [disabled]="loading || !canCreateJobs"
     (click)="openCreateDialog()"
   >
     <svg lucidePlus size="1.6rem"></svg>

@@ -19,13 +19,16 @@
             </button>
           }
         </div>
-        <button
-          class="jt-add-version-btn"
-          (click)="onAddVersion()"
-          title="Add version"
-        >
-          <svg lucidePlus size="1.4rem"></svg>
-        </button>
+        @if (canAddVersion) {
+          <button
+            class="jt-add-version-btn"
+            (click)="onAddVersion()"
+            [disabled]="!canAddVersion"
+            title="Add version"
+          >
+            <svg lucidePlus size="1.4rem"></svg>
+          </button>
+        }
       </div>
     </div>
   </div>

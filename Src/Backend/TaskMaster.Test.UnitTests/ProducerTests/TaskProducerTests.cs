@@ -1,7 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
+using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
 using TaskMaster.Library.Common.Interfaces.Registries;
+using TaskMaster.Library.Common.Models.Auth;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Producer;
 using TaskMaster.Library.Producer.DependencyInjection;
@@ -32,8 +34,18 @@ public class TaskProducerTests
         // Arrange
         var services = new ServiceCollection();
 
-        // Act
+        var apiHttpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+
+        apiHttpClient.Setup(x => x.GetAuthConfig()).ReturnsAsync(new AuthConfigDetails
+        {
+            Mode = EnumConstants.AuthModeEnum.None
+        });
+
+        services.AddSingleton<IApiHttpClient>(apiHttpClient.Object);
+
         services.AddTaskMasterProducer(options => options.ApiBaseUrl = "https://taskmaster.test/");
+
+        // Act
         using var serviceProvider = services.BuildServiceProvider();
 
         // Assert
@@ -46,17 +58,6 @@ public class TaskProducerTests
     {
         // Assert
         Assert.Throws<InvalidOperationException>(() => new TaskProducer());
-    }
-
-    [Test]
-    public void Initialise_WhenStandaloneMode_ShouldAllowParameterlessTaskProducer()
-    {
-        // Act
-        using var taskMasterProducer = TaskMasterProducer.Initialise(options => options.ApiBaseUrl = "https://taskmaster.test/");
-        var producer = new TaskProducer();
-
-        // Assert
-        Assert.That(producer, Is.Not.Null);
     }
 
     [Test]

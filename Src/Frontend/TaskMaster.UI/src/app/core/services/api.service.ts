@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  HttpParams,
+} from '@angular/common/http';
 import { Observable, map, catchError, of, forkJoin } from 'rxjs';
 import {
   Job,
@@ -180,7 +184,9 @@ export class ApiService {
     if (status != null) params = params.set('status', status);
 
     return this.http
-      .get<ApiResponse<BackendPagedResult<BackendJob>>>(`${this.baseUrl}/jobs`, { params })
+      .get<
+        ApiResponse<BackendPagedResult<BackendJob>>
+      >(`${this.baseUrl}/jobs`, { params })
       .pipe(
         map((res) => ({
           items: res.data.items.map((j) => this.mapJob(j)),
@@ -261,7 +267,9 @@ export class ApiService {
     if (status != null) params = params.set('status', status);
 
     return this.http
-      .get<ApiResponse<BackendPagedResult<BackendWorker>>>(`${this.baseUrl}/workers`, { params })
+      .get<
+        ApiResponse<BackendPagedResult<BackendWorker>>
+      >(`${this.baseUrl}/workers`, { params })
       .pipe(
         map((res) => ({
           items: res.data.items.map((w) => this.mapWorker(w)),
@@ -302,7 +310,9 @@ export class ApiService {
 
   getJobTypes(): Observable<JobType[]> {
     return this.http
-      .get<ApiResponse<BackendPagedResult<BackendJobType>>>(`${this.baseUrl}/job-types`)
+      .get<
+        ApiResponse<BackendPagedResult<BackendJobType>>
+      >(`${this.baseUrl}/job-types`)
       .pipe(
         map((res) =>
           res.data.items.map((j) => ({
@@ -355,7 +365,9 @@ export class ApiService {
 
   getRecentJobStats(): Observable<JobStatsItem[]> {
     return this.http
-      .get<ApiResponse<BackendJobStatsItem[]>>(`${this.baseUrl}/dashboard/job-stats`)
+      .get<
+        ApiResponse<BackendJobStatsItem[]>
+      >(`${this.baseUrl}/dashboard/job-stats`)
       .pipe(map((res) => res.data));
   }
 

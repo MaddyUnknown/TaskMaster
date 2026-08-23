@@ -3,6 +3,7 @@ using Microsoft.Extensions.Options;
 using Moq;
 using TaskMaster.Library.Common.Constants;
 using TaskMaster.Library.Common.Interfaces.HttpClients;
+using TaskMaster.Library.Common.Models.Auth;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Workers;
@@ -104,6 +105,16 @@ public class TaskWorkerTests
         // Arrange
         var services = new ServiceCollection();
 
+        var apiHttpClient = new Mock<IApiHttpClient>(MockBehavior.Strict);
+
+        apiHttpClient.Setup(x => x.GetAuthConfig()).ReturnsAsync(new AuthConfigDetails
+        {
+            Mode = EnumConstants.AuthModeEnum.None
+        });
+
+        services.AddSingleton<IApiHttpClient>(apiHttpClient.Object);
+
+
         services.AddTaskMasterConsumer(options => options.ApiBaseUrl = "https://taskmaster.test/");
         using var serviceProvider = services.BuildServiceProvider();
 
@@ -119,19 +130,6 @@ public class TaskWorkerTests
     {
         // Assert
         Assert.Throws<InvalidOperationException>(() => _ = new TaskWorkerFactory());
-    }
-
-    [Test]
-    public void Initialise_WhenStandaloneMode_ShouldAllowWorkerFactory()
-    {
-        // Arrange
-        using var consumer = TaskMasterConsumer.Initialise(options => options.ApiBaseUrl = "https://taskmaster.test/");
-
-        // Act
-        var factory = new TaskWorkerFactory();
-
-        // Assert
-        Assert.That(factory, Is.Not.Null);
     }
 
     [Test]

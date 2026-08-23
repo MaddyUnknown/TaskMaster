@@ -1,8 +1,12 @@
-﻿namespace TaskMaster.Library.Consumer.Configs
+﻿using TaskMaster.Library.Common.Configs;
+
+namespace TaskMaster.Library.Consumer.Configs
 {
     public class TaskMasterConsumerOptions
     {
         public string ApiBaseUrl { get; set; } = string.Empty;
+
+        public TaskMasterConsumerAuthOptions Auth { get; set; } = TaskMasterConsumerAuthOptions.Empty;
 
         public int MaxConcurrentHandlers { get; set; } = 5;
         public int PrefetchJobPerHandler { get; set; } = 1;

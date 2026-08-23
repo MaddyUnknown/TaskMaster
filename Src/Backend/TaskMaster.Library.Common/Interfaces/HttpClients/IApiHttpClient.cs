@@ -1,11 +1,13 @@
 ﻿using TaskMaster.Library.Common.Models.JobType;
 using TaskMaster.Library.Common.Models.Jobs;
 using TaskMaster.Library.Common.Models.Workers;
+using TaskMaster.Library.Common.Models.Auth;
 
 namespace TaskMaster.Library.Common.Interfaces.HttpClients
 {
     public interface IApiHttpClient
     {
+        Task<AuthConfigDetails?> GetAuthConfig();
         Task<JobTypeDetails?> GetJobType(GetJobTypeRequest request);
         Task<JobDetails> CreateJob(CreateJobRequest request);
         Task<RegisterWorkerResponse> RegisterWorker(RegisterWorker worker);

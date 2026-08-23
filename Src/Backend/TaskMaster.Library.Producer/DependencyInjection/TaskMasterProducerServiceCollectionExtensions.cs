@@ -14,9 +14,18 @@ namespace TaskMaster.Library.Producer.DependencyInjection
             var options = new TaskMasterProducerOptions();
             configure(options);
 
-            services.AddTaskMasterCommon(new ApiConfig
+            services.AddTaskMasterCommon(new AppConfig
             {
-                ApiBaseUrl = options.ApiBaseUrl
+                ApiBaseUrl = options.ApiBaseUrl,
+                Auth = new AuthConfig
+                {
+                    Oidc = options.Auth.Oidc == null ? null : new OidcConfig
+                    {
+                        ClientId = options.Auth.Oidc.ClientId,
+                        ClientSecret = options.Auth.Oidc.ClientSecret,
+                        RequestedScope = "jobs:create jobtypes:read"
+                    }
+                }
             });
 
             services.AddTransient<IProducer, TaskProducer>();

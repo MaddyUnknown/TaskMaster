@@ -7,11 +7,28 @@ import { WorkersComponent } from './features/workers/workers.component';
 import { WorkerDetailsComponent } from './features/worker-details/worker-details.component';
 import { JobTypesComponent } from './features/job-types/job-types.component';
 import { NotFoundComponent } from './features/not-found/not-found.component';
+import { AuthErrorComponent } from './features/auth-error/auth-error.component';
+import { authGuard } from './core/auth/auth.guard';
+import { AuthConfig, AuthMode } from './core/models';
 
-export const routes: Routes = [
+export function getRoutes(authConfig: AuthConfig): Routes {
+  const routers = [...ROUTES];
+  if (authConfig.mode !== AuthMode.None) {
+    routers.push({
+      path: 'auth-error',
+      component: AuthErrorComponent,
+      title: 'Sign in failed - TaskMaster',
+    });
+  }
+
+  return routers;
+}
+
+const ROUTES: Routes = [
   {
     path: '',
     component: LayoutComponent,
+    canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {

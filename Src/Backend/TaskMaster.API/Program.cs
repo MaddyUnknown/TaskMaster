@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TaskMaster.API.Auth;
 using TaskMaster.API.BackgroundServices;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Data;
@@ -63,6 +64,8 @@ namespace TaskMaster.API
                 options.EnableDetailedErrors();
             });
 
+            // Authentication & authorization (pluggable: None | Oidc)
+            builder.Services.AddTaskMasterAuth(builder.Configuration);
 
             // Application dependencies
             builder.Services.AddOptions<WorkerConfig>().Bind(builder.Configuration.GetSection("WorkerConfig"));
@@ -105,7 +108,23 @@ namespace TaskMaster.API
 
             // Swagger services
             builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+            builder.Services.AddSwaggerGen(options =>
+            {
+                options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.OpenApiSecurityScheme
+                {
+                    Name = "Authorization",
+                    Type = Microsoft.OpenApi.SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = Microsoft.OpenApi.ParameterLocation.Header,
+                    Description = "Paste a valid OIDC access token to authorize requests."
+                });
+
+                options.AddSecurityRequirement(document => new Microsoft.OpenApi.OpenApiSecurityRequirement
+                {
+                    [new Microsoft.OpenApi.OpenApiSecuritySchemeReference("Bearer", document)] = new List<string>()
+                });
+            });
 
             // Backgroup services
             builder.Services.AddHostedService<WorkerExpiryBackgroundService>();
@@ -124,7 +143,9 @@ namespace TaskMaster.API
 
             app.UseMiddleware<RequestContextMiddleware>();
             app.UseMiddleware<ExceptionHandlingMiddleware>();
+            app.UseMiddleware<ApiResponseStatusMiddleware>();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllers();

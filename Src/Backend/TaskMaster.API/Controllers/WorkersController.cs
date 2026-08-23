@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using TaskMaster.API.Auth;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Workers;
@@ -19,6 +20,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("")]
+        [RequirePermission(AuthPermissions.ReadWorkers)]
         public async Task<ActionResult<ApiResponse<PagedResult<WorkerDetails>>>> GetAll([FromQuery] WorkerQuery query)
         {
             var workers = await _workerService.GetAllWorkersAsync(query);
@@ -27,6 +29,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("counts")]
+        [RequirePermission(AuthPermissions.ReadWorkerStats)]
         public async Task<ActionResult<ApiResponse<WorkerStatusCounts>>> GetCounts()
         {
             var counts = await _workerService.GetWorkerStatusCountsAsync();
@@ -35,6 +38,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpGet("{workerId}")]
+        [RequirePermission(AuthPermissions.ReadWorkers)]
         public async Task<ActionResult<ApiResponse<WorkerDetails?>>> GetById(Guid workerId)
         {
             var worker = await _workerService.GetWorkerByPublicIdAsync(workerId);
@@ -48,6 +52,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("register")]
+        [RequirePermission(AuthPermissions.RegisterWorkers)]
         public async Task<ActionResult<ApiResponse<RegisterWorkerResponse>>> Register(RegisterWorker registerWorker)
         {
             var worker = await _workerService.RegisterAsync(registerWorker);
@@ -59,6 +64,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpDelete("{workerId}")]
+        [RequirePermission(AuthPermissions.RemoveWorker)]
         public async Task<ActionResult<ApiResponse<WorkerDetails>>> Remove(Guid workerId)
         {
             var worker = await _workerService.RemoveAsync(workerId);
@@ -67,6 +73,7 @@ namespace TaskMaster.API.Controllers
         }
 
         [HttpPost("{workerId}/heartbeat")]
+        [RequirePermission(AuthPermissions.WorkersHeartbeat)]
         public async Task<ActionResult<ApiResponse<HeartbeatActionStatus>>> HeartBeat(Guid workerId)
         {
             var heartBeatResponse = await _workerService.HeartBeatAsync(workerId);

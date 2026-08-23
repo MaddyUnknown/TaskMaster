@@ -19,5 +19,7 @@ namespace TaskMaster.Library.Common.Constants
         internal const string RegisterWorker = "/api/workers/register";
         internal static string RemoveWorker(Guid workerId) => $"/api/workers/{workerId}";
         internal static string WorkerHeartBeat(Guid workerId) => $"/api/workers/{workerId}/heartbeat";
+
+        internal static string GetAuthConfig() => $"/api/auth/config";
     }
 }
