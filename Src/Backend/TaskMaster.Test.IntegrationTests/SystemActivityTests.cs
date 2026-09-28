@@ -1,23 +1,25 @@
 using Microsoft.Extensions.DependencyInjection;
-using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.JobTypes;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Providers;
 using TaskMaster.Test.IntegrationTests.Data;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class SystemActivityTests : IntegrationTestBase
+public class SystemActivityTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task CreateJob_WhenPersisted_ShouldCreateJobCreatedActivity()
     {
         // Arrange
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var jobService = scope.ServiceProvider.GetRequiredService<IJobService>();
 
         var jobType = TestData.JobType();
@@ -47,7 +49,7 @@ public class SystemActivityTests : IntegrationTestBase
     {
         // Arrange
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var workerService = scope.ServiceProvider.GetRequiredService<IWorkerService>();
 
         var jobType = TestData.JobType();

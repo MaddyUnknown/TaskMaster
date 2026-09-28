@@ -1,4 +1,4 @@
-﻿using TaskMaster.API.Entities;
+using TaskMaster.API.Entities;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Models.Jobs;
@@ -17,8 +17,8 @@ namespace TaskMaster.API.Mappers
                 WorkerPublicId = Guid.NewGuid(),
                 WorkerName = request.WorkerName,
                 WorkerCapabilities = jobTypes.Select(t => new WorkerCapability { JobType = t }).ToList(),
-                LastHeartBeatTimestamp = DateTime.Now,
-                WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(workerExpiryIntervalSeconds),
+                LastHeartBeatTimestamp = DateTime.UtcNow,
+                WorkerExpiresAtTimestamp = DateTime.UtcNow.AddSeconds(workerExpiryIntervalSeconds),
                 Status = WorkerStatusEnum.Active,
             };
         }

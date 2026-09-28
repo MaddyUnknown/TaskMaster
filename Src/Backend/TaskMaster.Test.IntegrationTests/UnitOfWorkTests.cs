@@ -1,15 +1,16 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TaskMaster.API.Data;
-using TaskMaster.API.Entities;
 using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Entities;
 using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Providers;
 using TaskMaster.Test.IntegrationTests.Data;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class UnitOfWorkTests : IntegrationTestBase
+public class UnitOfWorkTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task BeginAndCommit_ShouldPersistChanges()
     {
@@ -23,7 +24,7 @@ public class UnitOfWorkTests : IntegrationTestBase
 
         await using var scope = ServiceProvider.CreateAsyncScope();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 
         // Act
         await uow.BeginTransactionAsync();
@@ -33,7 +34,7 @@ public class UnitOfWorkTests : IntegrationTestBase
 
         // Assert
         await using var assertScope = ServiceProvider.CreateAsyncScope();
-        var assertDb = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var assertDb = assertScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var types = await assertDb.JobTypes.ToListAsync();
         Assert.That(types, Has.Count.EqualTo(2));
     }
@@ -51,7 +52,7 @@ public class UnitOfWorkTests : IntegrationTestBase
 
         await using var scope = ServiceProvider.CreateAsyncScope();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
 
         // Act
         await uow.BeginTransactionAsync();
@@ -60,7 +61,7 @@ public class UnitOfWorkTests : IntegrationTestBase
 
         // Assert
         await using var assertScope = ServiceProvider.CreateAsyncScope();
-        var assertDb = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var assertDb = assertScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var types = await assertDb.JobTypes.ToListAsync();
         Assert.That(types, Has.Count.EqualTo(1));
     }
@@ -70,7 +71,7 @@ public class UnitOfWorkTests : IntegrationTestBase
     {
         // Arrange
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
 
         // Act
@@ -79,7 +80,7 @@ public class UnitOfWorkTests : IntegrationTestBase
 
         // Assert
         await using var assertScope = ServiceProvider.CreateAsyncScope();
-        var assertDb = assertScope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var assertDb = assertScope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var saved = await assertDb.JobTypes.SingleAsync();
         Assert.That(saved.CreatedDateTime, Is.Not.EqualTo(default));
     }

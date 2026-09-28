@@ -1,18 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
-using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Common;
 using static Azure.Core.HttpHeader;
+using TaskMaster.API.Interfaces.Data;
+
 
 namespace TaskMaster.API.Repositories
 {
     public class JobTypeRepository : IJobTypeRepository
     {
-        private ApplicationDbContext _context;
+        private IApplicationDbContext _context;
 
-        public JobTypeRepository(ApplicationDbContext context)
+        public JobTypeRepository(IApplicationDbContext context)
         {
             _context = context;
         }

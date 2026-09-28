@@ -1,15 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.EntityFrameworkCore.Storage;
 using TaskMaster.API.Interfaces.Data;
+
 
 namespace TaskMaster.API.Data
 {
     public class UnitOfWork : IUnitOfWork, IDisposable
     {
-        private ApplicationDbContext _context;
+        private IApplicationDbContext _context;
         private IDbContextTransaction? _dbTransaction;
         private bool _isDisposed = false;
 
-        public UnitOfWork(ApplicationDbContext context)
+        public UnitOfWork(IApplicationDbContext context)
         {
             _context = context;
         }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Entities.Abstractions;
 
@@ -12,11 +12,11 @@ namespace TaskMaster.API.Data
             {
                 if(entity.State == EntityState.Added)
                 {
-                    entity.Entity.CreatedDateTime = DateTime.Now;
+                    entity.Entity.CreatedDateTime = DateTime.UtcNow;
                 }
                 else if(entity.State == EntityState.Modified)
                 {
-                    entity.Entity.ModifyDateTime = DateTime.Now;
+                    entity.Entity.ModifyDateTime = DateTime.UtcNow;
                 }
             }
 

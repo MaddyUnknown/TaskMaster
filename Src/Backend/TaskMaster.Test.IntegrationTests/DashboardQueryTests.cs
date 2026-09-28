@@ -1,15 +1,17 @@
 using Microsoft.Extensions.DependencyInjection;
-using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
-using TaskMaster.API.Queries;
+using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Providers;
 using TaskMaster.Test.IntegrationTests.Data;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class DashboardQueryTests : IntegrationTestBase
+public class DashboardQueryTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task GetDashboardDataAsync_WhenDataSeeded_ShouldReturnCorrectCounts()
     {
@@ -38,8 +40,7 @@ public class DashboardQueryTests : IntegrationTestBase
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var query = new DashboardQuery(db);
+        var query = scope.ServiceProvider.GetRequiredService<IDashboardQuery>();
 
         // Act
         var result = await query.GetDashboardDataAsync();
@@ -69,14 +70,13 @@ public class DashboardQueryTests : IntegrationTestBase
                 EntityType = EntityType.Job,
                 ActivityType = ActivityType.JobCreated,
                 Message = "Job 'email v1' created",
-                CreatedDateTime = DateTime.Now
+                CreatedDateTime = DateTime.UtcNow
             });
             await db.SaveChangesAsync();
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        var query = new DashboardQuery(db);
+        var query = scope.ServiceProvider.GetRequiredService<IDashboardQuery>();
 
         // Act
         var activities = await query.GetRecentSystemActivitiesAsync(10);

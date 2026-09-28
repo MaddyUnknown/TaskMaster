@@ -1,103 +1,31 @@
 using Microsoft.EntityFrameworkCore;
-using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
-using TaskMaster.API.Enums;
+using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Interfaces.Persistence;
+
 
 namespace TaskMaster.API.Queries
 {
     public class DashboardQuery : IDashboardQuery
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IApplicationDbContext _context;
+        private readonly IDashboardStatsStore _statsStore;
 
-        public DashboardQuery(ApplicationDbContext context)
+        public DashboardQuery(IApplicationDbContext context, IDashboardStatsStore statsStore)
         {
             _context = context;
-        }
-        
-        public async Task<DashboardData> GetDashboardDataAsync()
-        {
-            try
-            {
-                var result = await _context.Database
-                    .SqlQuery<DashboardCounts>(
-                        $@"SELECT
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Queued}) AS QueuedJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.InProgress}) AS InProgressJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Completed}) AS CompletedJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Failed}) AS FailedJobs,
-                            (SELECT COUNT(*) FROM Workers WHERE Status = {(int)WorkerStatusEnum.Active}) AS ActiveWorkers,
-                            (SELECT COUNT(*) FROM Workers WHERE Status = {(int)WorkerStatusEnum.InActive}) AS InactiveWorkers"
-                    )
-                    .SingleAsync();
-
-                return new DashboardData
-                {
-                    QueuedJobs = result.QueuedJobs,
-                    InProgressJobs = result.InProgressJobs,
-                    CompletedJobs = result.CompletedJobs,
-                    FailedJobs = result.FailedJobs,
-                    ActiveWorkers = result.ActiveWorkers,
-                    InactiveWorkers = result.InactiveWorkers,
-                    DatabaseHealthy = true
-                };
-            }
-            catch
-            {
-                return new DashboardData
-                {
-                    DatabaseHealthy = false
-                };
-            }
+            _statsStore = statsStore;
         }
 
-        public async Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        public Task<DashboardData> GetDashboardDataAsync()
         {
-            var raw = await _context.Database.SqlQuery<HourlyCount>(
-                $@"DECLARE @CurrentBucketStart DATETIME2 = DATEADD(
-                    HOUR,
-                    (DATEDIFF(HOUR, 0, SYSDATETIME()) / 2) * 2,
-                    0
-                );
+            return _statsStore.GetDashboardCountsAsync();
+        }
 
-                WITH Buckets AS
-                (
-                    SELECT DATEADD(HOUR, -22, @CurrentBucketStart) AS BucketStart
-                    UNION ALL
-                    SELECT DATEADD(HOUR, 2, BucketStart)
-                    FROM Buckets
-                    WHERE BucketStart < @CurrentBucketStart
-                ),
-                JobCounts AS
-                (
-                    SELECT 
-		                DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0) AS BucketStart,
-                        COUNT(*) AS JobCount
-                    FROM Jobs
-                    WHERE 
-		                CreatedDateTime >= DATEADD(HOUR, -22, @CurrentBucketStart)
-		                AND CreatedDateTime < SYSDATETIME()
-                    GROUP BY
-                        DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0)
-                )
-                SELECT
-                    b.BucketStart,
-	                DATEADD(HOUR, 2, b.BucketStart) BucketEnd,
-	                CONVERT(char(5), b.BucketStart, 108) BucketHour,
-                    ISNULL(j.JobCount, 0) AS JobCount
-                FROM Buckets b
-                LEFT JOIN JobCounts j
-                    ON b.BucketStart = j.BucketStart
-                ORDER BY b.BucketStart;"
-            ).ToListAsync();
-
-            return raw.Select(r => new JobStatsItem
-            {
-                BucketStart = r.BucketStart,
-                BucketEnd = r.BucketEnd,
-                BucketHour = r.BucketHour,
-                JobCount = r.JobCount
-            });
+        public Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        {
+            return _statsStore.GetHourlyJobStatsAsync();
         }
 
         public async Task<List<SystemActivity>> GetRecentSystemActivitiesAsync(int count)
@@ -106,24 +34,6 @@ namespace TaskMaster.API.Queries
                 .OrderByDescending(a => a.CreatedDateTime)
                 .Take(count)
                 .ToListAsync();
-        }
-
-        private sealed class HourlyCount
-        {
-            public DateTime BucketStart { get; set; }
-            public DateTime BucketEnd { get; set; }
-            public string BucketHour { get; set; } = string.Empty;
-            public int JobCount { get; set; }
-        }
-
-        private class DashboardCounts
-        {
-            public int QueuedJobs { get; set; }
-            public int InProgressJobs { get; set; }
-            public int CompletedJobs { get; set; }
-            public int FailedJobs { get; set; }
-            public int ActiveWorkers { get; set; }
-            public int InactiveWorkers { get; set; }
         }
     }
 }

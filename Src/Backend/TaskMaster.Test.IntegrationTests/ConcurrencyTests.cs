@@ -1,17 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http.Json;
-using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Providers;
 using TaskMaster.Test.IntegrationTests.Data;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class ConcurrencyTests : IntegrationTestBase
+public class ConcurrencyTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task GetNextWorkerJobsAsync_WhenOneJobUnderConcurrency_ShouldOnlyBeClaimedOnceByOneWorker()
     {

@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using TaskMaster.API.Configs;
 using TaskMaster.API.Constants;
 using TaskMaster.API.Entities;
@@ -72,8 +72,8 @@ namespace TaskMaster.API.Services
                         worker.WorkerCapabilities.Add(new WorkerCapability { JobType = jobType });
                     }
 
-                    worker.LastHeartBeatTimestamp = DateTime.Now;
-                    worker.WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(_workerConfigOption.Value.WorkerExpiryIntervalSeconds);
+                    worker.LastHeartBeatTimestamp = DateTime.UtcNow;
+                    worker.WorkerExpiresAtTimestamp = DateTime.UtcNow.AddSeconds(_workerConfigOption.Value.WorkerExpiryIntervalSeconds);
                     worker.Status = WorkerStatusEnum.Active;
                     _workerCRUDRepository.Update(worker);
                 }
