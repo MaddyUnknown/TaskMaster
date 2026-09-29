@@ -42,7 +42,7 @@ namespace TaskMaster.API.Persistence.PostgreSql
                 ),
                 jobIds AS
                 (
-                    UPDATE ""Jobs"" j
+                    UPDATE ""Jobs"" AS j
                     SET
                         ""Status"" = {(int)JobStatusEnum.InProgress},
                         ""AssignedWorkerId"" = c.""WorkerId"",
