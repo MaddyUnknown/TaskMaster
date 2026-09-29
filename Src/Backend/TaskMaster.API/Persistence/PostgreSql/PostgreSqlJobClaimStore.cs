@@ -24,8 +24,6 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var currentDateTime = DateTime.UtcNow;
 
             FormattableString sql = $@"
-                DECLARE @jobIds TABLE (Id bigint NOT NULL);
-
                 WITH cte AS
                 (
                     SELECT j.*
