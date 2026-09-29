@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TaskMaster Demo &mdash; Report Processing</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">TM</span>
+      <div>
+        <h1>TaskMaster Demo</h1>
+        <p class="subtitle">Distributed job processing &mdash; external integration sample</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Generate report</h2>
+      <p class="muted">
+        Submitting creates a job in the existing TaskMaster API through the Producer SDK.
+        A separate demo consumer process picks it up, generates a synthetic sales report
+        and writes it to storage. This page polls the demo database until the file is ready.
+      </p>
+      <form id="report-form">
+        <label for="title">Report title</label>
+        <input id="title" name="title" type="text" maxlength="80" placeholder="Q3 synthetic sales" required />
+
+        <label for="records">Number of records: <output id="records-out" for="records">2000</output></label>
+        <input id="records" name="records" type="range" min="10" max="10000" step="10" value="2000" />
+
+        <button id="submit-btn" class="btn primary" type="submit">Generate Report</button>
+      </form>
+      <p id="form-error" class="error hidden"></p>
+    </section>
+
+    <section class="card">
+      <h2>Reports</h2>
+      <p class="muted">
+        Reports are one-shot: this list is not restored on reload, and each generated file
+        is deleted automatically after 24 hours.
+      </p>
+      <p id="empty-state" class="muted">No reports yet. Generate your first report above.</p>
+      <ul id="report-list" class="submission-list"></ul>
+    </section>
+
+    <section id="result-card" class="card hidden">
+      <div class="result-head">
+        <h2 id="result-title">Result</h2>
+        <div>
+          <button id="download-btn" class="btn small">Download CSV</button>
+          <button id="close-result-btn" class="btn small secondary">Close</button>
+        </div>
+      </div>
+      <p id="result-meta" class="muted"></p>
+      <p id="result-truncated" class="warn hidden">The result was truncated to respect the configured size limit.</p>
+      <div class="table-wrap">
+        <table id="result-table"></table>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p class="muted">
+      Demo only. Job persistence, worker lifecycle and status reporting are owned by the existing
+      TaskMaster platform. This app is a thin external integration example.
+    </p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
