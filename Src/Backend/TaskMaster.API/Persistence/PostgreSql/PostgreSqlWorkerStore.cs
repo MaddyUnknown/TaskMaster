@@ -21,8 +21,8 @@ namespace TaskMaster.API.Persistence.PostgreSql
             CancellationToken cancellationToken = default)
         {
             FormattableString sql = withLock
-                ? (FormattableString) $@"SELECT * FROM Workers WHERE WorkerName = {workerName} FOR UPDATE"
-                : (FormattableString) $@"SELECT * FROM Workers WHERE WorkerName = {workerName}";
+                ? (FormattableString) $@"SELECT * FROM ""Workers"" WHERE ""WorkerName"" = {workerName} FOR UPDATE"
+                : (FormattableString) $@"SELECT * FROM ""Workers"" WHERE ""WorkerName"" = {workerName}";
 
             return _context.Workers
                 .FromSqlInterpolated(sql)
@@ -39,13 +39,13 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var currentDateTime = DateTime.UtcNow;
 
             FormattableString sql = $@"
-                UPDATE Workers
+                UPDATE ""Workers""
                 SET
-                    LastHeartBeatTimestamp = {currentDateTime},
-                    WorkerExpiresAtTimestamp = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)},
-                    ModifyDateTime = {currentDateTime}
-                WHERE WorkerPublicId = {workerPublicId}
-                AND WorkerExpiresAtTimestamp > {currentDateTime}
+                    ""LastHeartBeatTimestamp"" = {currentDateTime},
+                    ""WorkerExpiresAtTimestamp"" = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)},
+                    ""ModifyDateTime"" = {currentDateTime}
+                WHERE ""WorkerPublicId"" = {workerPublicId}
+                AND ""WorkerExpiresAtTimestamp"" > {currentDateTime}
                 RETURNING *;
             ";
 
@@ -61,12 +61,12 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var currentDateTime = DateTime.UtcNow;
 
             FormattableString sql = $@"
-                UPDATE Workers
+                UPDATE ""Workers""
                 SET
-                    Status = {(int)WorkerStatusEnum.InActive},
-                    ModifyDateTime = {currentDateTime}
-                WHERE Status = {(int)WorkerStatusEnum.Active}
-                AND WorkerExpiresAtTimestamp <= {currentDateTime};
+                    ""Status"" = {(int)WorkerStatusEnum.InActive},
+                    ""ModifyDateTime"" = {currentDateTime}
+                WHERE ""Status"" = {(int)WorkerStatusEnum.Active}
+                AND ""WorkerExpiresAtTimestamp"" <= {currentDateTime};
             ";
 
             return _context.Database.ExecuteSqlInterpolatedAsync(sql, cancellationToken);
