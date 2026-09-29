@@ -1,14 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using System.Threading;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.Test.IntegrationTests.Providers;
 
 namespace TaskMaster.Test.IntegrationTests.Factories
 {
-    /// <summary>
-    /// Applies the engine's migrations to an empty database and empties it between tests.
-    /// Engine specific work (which migrations set exists, how to truncate) is delegated to
-    /// the <see cref="ITestProvider"/>.
-    /// </summary>
     public class DatabaseFixture
     {
         private readonly IApplicationDbContext _dbContext;
@@ -20,7 +16,13 @@ namespace TaskMaster.Test.IntegrationTests.Factories
             _provider = provider;
         }
 
-        public Task InitializeAsync() => _dbContext.Database.MigrateAsync();
+        public async Task InitializeAsync()
+        {
+            var pending = (await _dbContext.Database.GetPendingMigrationsAsync()).ToList();
+            if (pending.Count == 0) return;
+
+            await _dbContext.Database.MigrateAsync();
+        }
 
         public Task DisposeAsync() => Task.CompletedTask;
 

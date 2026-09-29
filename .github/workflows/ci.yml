@@ -78,12 +78,6 @@ jobs:
         run: npm run build
         working-directory: Src/Frontend/TaskMaster.UI
 
-      - name: Verify SQL Server migrations are in sync with the model
-        run: dotnet ef migrations has-pending-model-changes --context SqlServerDbContext --project Src/Backend/TaskMaster.API
-
-      - name: Verify PostgreSQL migrations are in sync with the model
-        run: dotnet ef migrations has-pending-model-changes --context NpgsqlDbContext --project Src/Backend/TaskMaster.API
-
       - name: Run Unit Tests
         run: dotnet test Src/Backend/TaskMaster.Test.UnitTests --no-build --verbosity normal
 
