@@ -93,7 +93,7 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var currentDateTime = DateTime.UtcNow;
 
             FormattableString sql = $@"
-                UPDATE ""Jobs"" j
+                UPDATE ""Jobs"" AS j
                 SET
                     j.""Status"" = {(int)JobStatusEnum.Queued},
                     j.""AssignedWorkerId"" = NULL,
