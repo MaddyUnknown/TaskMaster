@@ -18,8 +18,8 @@ internal static class TestData
         WorkerName = name,
         Status = WorkerStatusEnum.Active,
         WorkerCapabilities = jobTypes == null ? [] : jobTypes.Select(jt => new WorkerCapability { JobType = jt }).ToArray(),
-        LastHeartBeatTimestamp = DateTime.Now,
-        WorkerExpiresAtTimestamp = DateTime.Now.AddSeconds(workerExpiryIntervalSeconds),
+        LastHeartBeatTimestamp = DateTime.UtcNow,
+        WorkerExpiresAtTimestamp = DateTime.UtcNow.AddSeconds(workerExpiryIntervalSeconds),
     };
 
     public static Job Job(JobType jobType, string payload = "{\"id\":1}") => new()

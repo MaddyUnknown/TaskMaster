@@ -1,15 +1,16 @@
-﻿using Microsoft.EntityFrameworkCore;
-using TaskMaster.API.Data;
+using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Entities.Abstractions;
 using TaskMaster.API.Interfaces.Repositories;
+using TaskMaster.API.Interfaces.Data;
+
 
 namespace TaskMaster.API.Repositories
 {
     public class Repository<T> : IRepository<T> where T : BaseEntity
     {
-        private ApplicationDbContext _context;
+        private IApplicationDbContext _context;
 
-        public Repository(ApplicationDbContext context)
+        public Repository(IApplicationDbContext context)
         {
             _context = context;
         }

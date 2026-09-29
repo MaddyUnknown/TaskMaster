@@ -1,7 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using TaskMaster.API.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Interfaces.Data;
+using TaskMaster.API.Interfaces.Persistence;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Workers;
@@ -10,10 +11,13 @@ namespace TaskMaster.API.Repositories
 {
     public class WorkerRepository : IWorkerRepository
     {
-        private ApplicationDbContext _context;
-        public WorkerRepository(ApplicationDbContext context)
+        private readonly IApplicationDbContext _context;
+        private readonly IWorkerStore _workerStore;
+
+        public WorkerRepository(IApplicationDbContext context, IWorkerStore workerStore)
         {
             _context = context;
+            _workerStore = workerStore;
         }
 
         public async Task<Worker?> GetByPublicIdAsync(Guid workerPublicId)
@@ -50,36 +54,14 @@ namespace TaskMaster.API.Repositories
             return PagedResult<Worker>.Create(items, page, pageSize, totalCount);
         }
 
-        public async Task<Worker?> GetByWorkerNameAsync(string workerName, bool withLock = false)
+        public Task<Worker?> GetByWorkerNameAsync(string workerName, bool withLock = false)
         {
-            var sql = withLock
-                ? $"SELECT * FROM Workers WITH (UPDLOCK) WHERE WorkerName = {{0}}"
-                : $"SELECT * FROM Workers WHERE WorkerName = {{0}}";
-
-            return await _context.Workers
-                .FromSqlRaw(sql, workerName)
-                .Include(w => w.WorkerCapabilities)
-                .ThenInclude(wc => wc.JobType)
-                .FirstOrDefaultAsync();
+            return _workerStore.GetByWorkerNameAsync(workerName, withLock);
         }
 
-        public async Task<Worker?> UpdateWorkerExpiryAndReturnAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
+        public Task<Worker?> UpdateWorkerExpiryAndReturnAsync(Guid workerPublicId, int workerExpiryIntervalSeconds)
         {
-            var currentDateTime = DateTime.Now;
-
-            FormattableString sql = $@"
-                UPDATE Workers
-                SET 
-                    LastHeartBeatTimestamp = {currentDateTime},
-                    WorkerExpiresAtTimestamp = {currentDateTime.AddSeconds(workerExpiryIntervalSeconds)}, 
-                    ModifyDateTime = {currentDateTime}
-                OUTPUT inserted.*
-                WHERE WorkerPublicId = {workerPublicId}
-                AND WorkerExpiresAtTimestamp > {currentDateTime}
-            ";
-
-            var workers = await _context.Workers.FromSqlInterpolated(sql).ToListAsync();
-            return workers.FirstOrDefault();
+            return _workerStore.UpdateWorkerExpiryAndReturnAsync(workerPublicId, workerExpiryIntervalSeconds);
         }
 
         public async Task<WorkerStatusCounts> CountWorkersByStatusAsync()
@@ -96,25 +78,14 @@ namespace TaskMaster.API.Repositories
             };
         }
 
-        public async Task<int> DeactivateExpiredWorkersAsync()
+        public Task<int> DeactivateExpiredWorkersAsync()
         {
-            var currentDateTime = DateTime.Now;
-
-            FormattableString sql = $@"
-                UPDATE Workers
-                SET 
-                    Status = {(int)WorkerStatusEnum.InActive}, 
-                    ModifyDateTime = {currentDateTime}
-                WHERE Status = {(int)WorkerStatusEnum.Active}
-                AND WorkerExpiresAtTimestamp <= {currentDateTime};
-            ";
-
-            return await _context.Database.ExecuteSqlInterpolatedAsync(sql);
+            return _workerStore.DeactivateExpiredWorkersAsync();
         }
 
         public async Task<List<Worker>> GetExpiredActiveWorkersAsync()
         {
-            var currentDateTime = DateTime.Now;
+            var currentDateTime = DateTime.UtcNow;
 
             return await _context.Workers
                 .Where(w => w.Status == WorkerStatusEnum.Active && w.WorkerExpiresAtTimestamp <= currentDateTime)

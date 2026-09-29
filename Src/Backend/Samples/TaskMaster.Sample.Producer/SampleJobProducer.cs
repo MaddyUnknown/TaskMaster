@@ -29,7 +29,7 @@ public class SampleJobProducer
                 var payload = new SamplePayload
                 {
                     Message = $"Hello from sample producer #{_seq + 1}{(isBurst && count > 1 ? " (burst)" : "")}",
-                    ProducedAt = DateTime.Now,
+                    ProducedAt = DateTime.UtcNow,
                     SequenceNumber = ++_seq
                 };
 

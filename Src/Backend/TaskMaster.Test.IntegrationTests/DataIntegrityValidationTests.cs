@@ -1,13 +1,16 @@
-using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 using TaskMaster.API.Enums;
 using TaskMaster.Test.IntegrationTests.Abstracts;
 using TaskMaster.Test.IntegrationTests.Data;
+using TaskMaster.Test.IntegrationTests.Providers;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class DataIntegrityValidationTests : IntegrationTestBase
+public class DataIntegrityValidationTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task HealthyDatabase_WhenDeletingWorkerWithAssignedJob_ShouldThrowException()
     {
@@ -31,12 +34,12 @@ public class DataIntegrityValidationTests : IntegrationTestBase
         {
             await ExecuteDbAsync(async db =>
             {
-                await db.Database.ExecuteSqlRawAsync(IntegrityQueries.DeleteWorkers);
+                await db.Database.ExecuteSqlRawAsync(TestProvider.DeleteWorkersScript);
             });
         };
 
         // Assert
-        Assert.ThrowsAsync<SqlException>(async () => await act());
+        Assert.CatchAsync<DbException>(async () => await act());
     }
 
     [Test]
@@ -56,12 +59,12 @@ public class DataIntegrityValidationTests : IntegrationTestBase
         {
             await ExecuteDbAsync(async db =>
             {
-                await db.Database.ExecuteSqlRawAsync(IntegrityQueries.DeleteJobTypes);
+                await db.Database.ExecuteSqlRawAsync(TestProvider.DeleteJobTypesScript);
             });
         };
 
         // Assert
-        Assert.ThrowsAsync<SqlException>(async () => await act());
+        Assert.CatchAsync<DbException>(async () => await act());
     }
 
     [Test]
@@ -81,17 +84,11 @@ public class DataIntegrityValidationTests : IntegrationTestBase
         {
             await ExecuteDbAsync(async db =>
             {
-                await db.Database.ExecuteSqlRawAsync(IntegrityQueries.DeleteJobTypes);
+                await db.Database.ExecuteSqlRawAsync(TestProvider.DeleteJobTypesScript);
             });
         };
 
         // Assert
-        Assert.ThrowsAsync<SqlException>(async () => await act());
-    }
-
-    private static class IntegrityQueries
-    {
-        public const string DeleteWorkers = """DELETE FROM Workers""";
-        public const string DeleteJobTypes = """DELETE FROM JobTypes""";
+        Assert.CatchAsync<DbException>(async () => await act());
     }
 }

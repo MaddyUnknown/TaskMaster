@@ -1,20 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using TaskMaster.API.Data;
+using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
-using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Repositories;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Jobs;
 using TaskMaster.API.Models.Workers;
 using TaskMaster.Test.IntegrationTests.Abstracts;
+using TaskMaster.Test.IntegrationTests.Providers;
 using TaskMaster.Test.IntegrationTests.Data;
 
 namespace TaskMaster.Test.IntegrationTests;
 
-public class RepositoryBehaviorTests : IntegrationTestBase
+public class RepositoryBehaviorTests : ProviderIntegrationTestBase
 {
+
     [Test]
     public async Task CreateJob_WhenValidJob_ShouldPersistJob()
     {
@@ -27,7 +28,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<Job>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var persistedJobType = await db.JobTypes.SingleAsync();
@@ -55,7 +56,7 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
         var repository = scope.ServiceProvider.GetRequiredService<IRepository<Worker>>();
         var unitOfWork = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
         var jobType = await db.JobTypes.SingleAsync();
@@ -739,8 +740,8 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         {
             var jobType = TestData.JobType();
             var worker = TestData.Worker("worker-a", [jobType]);
-            worker.WorkerExpiresAtTimestamp = DateTime.Now.AddDays(-1);
-            worker.LastHeartBeatTimestamp = DateTime.Now.AddDays(-2);
+            worker.WorkerExpiresAtTimestamp = DateTime.UtcNow.AddDays(-1);
+            worker.LastHeartBeatTimestamp = DateTime.UtcNow.AddDays(-2);
             db.AddRange(jobType, worker);
             await db.SaveChangesAsync();
             workerPublicId = worker.WorkerPublicId;
@@ -772,8 +773,8 @@ public class RepositoryBehaviorTests : IntegrationTestBase
         {
             var jobType = TestData.JobType();
             var worker = TestData.Worker("worker-a", [jobType]);
-            worker.WorkerExpiresAtTimestamp = DateTime.Now.AddDays(1);
-            worker.LastHeartBeatTimestamp = DateTime.Now;
+            worker.WorkerExpiresAtTimestamp = DateTime.UtcNow.AddDays(1);
+            worker.LastHeartBeatTimestamp = DateTime.UtcNow;
             db.AddRange(jobType, worker);
             await db.SaveChangesAsync();
             workerPublicId = worker.WorkerPublicId;

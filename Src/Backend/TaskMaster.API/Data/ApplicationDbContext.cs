@@ -1,14 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using TaskMaster.API.Configs;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Interfaces.Data;
 
 namespace TaskMaster.API.Data
 {
-    public class ApplicationDbContext : DbContext
+    public abstract class ApplicationDbContext : DbContext, IApplicationDbContext
     {
-        private IEnumerable<ISaveInterceptor> _saveInterceptors;
+        private readonly IEnumerable<ISaveInterceptor> _saveInterceptors;
 
         public DbSet<Worker> Workers { get; set; }
         public DbSet<WorkerCapability> WorkerCapabilities { get; set; }
@@ -16,22 +15,33 @@ namespace TaskMaster.API.Data
         public DbSet<JobType> JobTypes { get; set; }
         public DbSet<SystemActivity> SystemActivities { get; set; }
 
-        public ApplicationDbContext(DbContextOptions options, IEnumerable<ISaveInterceptor> saveInterceptors) : base(options)
+        protected ApplicationDbContext(
+            DbContextOptions options,
+            IEnumerable<ISaveInterceptor> saveInterceptors) : base(options)
         {
-            _saveInterceptors = saveInterceptors;
+            _saveInterceptors = saveInterceptors ?? Array.Empty<ISaveInterceptor>();
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // Job Setup
+            base.OnModelCreating(modelBuilder);
+
+            ConfigureJobEntity(modelBuilder);
+            ConfigureJobTypeEntity(modelBuilder);
+            ConfigureWorkerEntity(modelBuilder);
+            ConfigureWorkerCapabilityEntity(modelBuilder);
+            ConfigureSystemActivityEntity(modelBuilder);
+
+            ConfigureJobQueueIndex(modelBuilder);
+            ConfigureWorkerExpiryIndex(modelBuilder);
+            ConfigureDateTimeColumns(modelBuilder);
+        }
+
+        private static void ConfigureJobEntity(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<Job>()
                 .HasIndex(j => new { j.JobPublicId })
                 .IsUnique();
-
-            modelBuilder.Entity<Job>()
-                .HasIndex(j => new { j.JobTypeId, j.Status })
-                .HasDatabaseName("IX_Jobs_JobTypeId_Status")
-                .IncludeProperties(j => j.Id);
 
             modelBuilder.Entity<Job>()
                 .HasOne(j => j.JobType)
@@ -43,35 +53,28 @@ namespace TaskMaster.API.Data
                 .HasOne(j => j.AssignedWorker)
                 .WithMany()
                 .HasForeignKey(j => j.AssignedWorkerId);
+        }
 
-            // JobType Setup
+        private static void ConfigureJobTypeEntity(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<JobType>()
                 .HasIndex(t => new { t.Name, t.Version })
                 .IsUnique();
+        }
 
-            // Worker Setup
+        private void ConfigureWorkerEntity(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<Worker>()
-                .HasIndex(w => w.WorkerName)
+                .HasIndex(w => new { w.WorkerName })
                 .IsUnique();
 
             modelBuilder.Entity<Worker>()
                 .HasIndex(w => new { w.WorkerPublicId })
                 .IsUnique();
+        }
 
-            modelBuilder.Entity<Worker>()
-                .HasIndex(w => new { w.Status, w.WorkerExpiresAtTimestamp })
-                .HasDatabaseName("IX_Workers_Status_WorkerExpiresAtTimestamp")
-                .IncludeProperties(w => w.Id);
-
-            modelBuilder.Entity<Worker>()
-                .Property(w => w.WorkerExpiresAtTimestamp)
-                .HasColumnType("datetime2");
-
-            modelBuilder.Entity<Worker>()
-                .Property(w => w.LastHeartBeatTimestamp)
-                .HasColumnType("datetime2");
-
-            // WorkerCapability Setup
+        private static void ConfigureWorkerCapabilityEntity(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<WorkerCapability>()
                 .HasIndex(wc => new { wc.WorkerId, wc.JobTypeId })
                 .IsUnique();
@@ -81,11 +84,53 @@ namespace TaskMaster.API.Data
                 .WithMany()
                 .HasForeignKey(wc => wc.JobTypeId)
                 .OnDelete(DeleteBehavior.Restrict);
+        }
 
-            // SystemActivity Setup
+        private static void ConfigureSystemActivityEntity(ModelBuilder modelBuilder)
+        {
             modelBuilder.Entity<SystemActivity>()
                 .HasIndex(a => a.CreatedDateTime);
         }
+
+        protected virtual void ConfigureJobQueueIndex(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Job>()
+                .HasIndex(j => new { j.JobTypeId, j.Status })
+                .HasDatabaseName("IX_Jobs_JobTypeId_Status");
+        }
+
+        protected virtual void ConfigureWorkerExpiryIndex(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Worker>()
+                .HasIndex(w => new { w.Status, w.WorkerExpiresAtTimestamp })
+                .HasDatabaseName("IX_Workers_Status_WorkerExpiresAtTimestamp");
+        }
+
+        protected virtual void ConfigureDateTimeColumns(ModelBuilder modelBuilder)
+        {
+            ConfigureAuditTimestamps(modelBuilder.Entity<Job>());
+            ConfigureAuditTimestamps(modelBuilder.Entity<JobType>());
+            ConfigureAuditTimestamps(modelBuilder.Entity<Worker>());
+            ConfigureAuditTimestamps(modelBuilder.Entity<WorkerCapability>());
+            ConfigureAuditTimestamps(modelBuilder.Entity<SystemActivity>());
+
+            modelBuilder.Entity<Worker>()
+                .Property(w => w.WorkerExpiresAtTimestamp)
+                .HasColumnType(DateTimeColumnType);
+
+            modelBuilder.Entity<Worker>()
+                .Property(w => w.LastHeartBeatTimestamp)
+                .HasColumnType(DateTimeColumnType);
+        }
+
+        private void ConfigureAuditTimestamps<TEntity>(
+            EntityTypeBuilder<TEntity> builder) where TEntity : Entities.Abstractions.BaseEntity
+        {
+            builder.Property(e => e.CreatedDateTime).HasColumnType(DateTimeColumnType);
+            builder.Property(e => e.ModifyDateTime).HasColumnType(DateTimeColumnType);
+        }
+
+        protected abstract string DateTimeColumnType { get; }
 
         public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {

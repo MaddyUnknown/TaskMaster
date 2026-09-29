@@ -5,5 +5,7 @@
         public int HeartBeatIntervalSeconds { get; set; }
         public int WorkerExpiryIntervalSeconds { get; set; }
         public int WorkerExpiryCheckIntervalSeconds { get; set; }
+
+        public static string SectionName => "WorkerConfig";
     }
 }
