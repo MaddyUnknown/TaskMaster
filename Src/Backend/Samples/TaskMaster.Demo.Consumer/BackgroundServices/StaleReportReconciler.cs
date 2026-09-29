@@ -1,0 +1,112 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using TaskMaster.Demo.Consumer.Configs;
+using TaskMaster.Demo.Consumer.Reports;
+
+namespace TaskMaster.Demo.Consumer.BackgroundServices;
+
+/// <summary>
+/// Fails reports abandoned by a previous run of this worker.
+///
+/// A handler that dies mid-flight (process killed, host crash) never reaches its
+/// <c>MarkFailedAsync</c>, so its row stays Running forever and the web UI polls it
+/// until the retention sweep removes it 24 hours later. This sweep closes that gap by
+/// failing any row still Running with no update for longer than
+/// <c>Demo:StaleReportTimeoutMinutes</c>.
+///
+/// Runs in the consumer because this process is the only writer of the Running state.
+/// The timeout is validated at startup to exceed the generation budget, so a healthy
+/// long job is never failed underneath itself.
+/// </summary>
+public sealed class StaleReportReconciler : BackgroundService
+{
+    private const int MaxRowsPerSweep = 100;
+
+    private readonly IServiceScopeFactory _scopeFactory;
+    private readonly DemoConsumerOptions _options;
+    private readonly ILogger<StaleReportReconciler> _logger;
+
+    public StaleReportReconciler(
+        IServiceScopeFactory scopeFactory,
+        IOptions<DemoConsumerOptions> options,
+        ILogger<StaleReportReconciler> logger)
+    {
+        _scopeFactory = scopeFactory;
+        _options = options.Value;
+        _logger = logger;
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        var interval = TimeSpan.FromMinutes(Math.Max(1, _options.StaleSweepMinutes));
+
+        using var timer = new PeriodicTimer(interval);
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await SweepAsync(stoppingToken);
+            }
+            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                // Never let one bad sweep kill the loop.
+                _logger.LogError(ex, "Stale report sweep failed; retrying on the next tick");
+            }
+
+            try
+            {
+                if (!await timer.WaitForNextTickAsync(stoppingToken)) return;
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+    }
+
+    private async Task SweepAsync(CancellationToken cancellationToken)
+    {
+        var cutoff = DateTimeOffset.UtcNow.AddMinutes(-_options.StaleReportTimeoutMinutes);
+
+        using var scope = _scopeFactory.CreateScope();
+        var repository = scope.ServiceProvider.GetRequiredService<IReportRepository>();
+
+        var stale = await repository.GetStaleRunningAsync(cutoff, MaxRowsPerSweep, cancellationToken);
+        if (stale.Count == 0) return;
+
+        var failed = 0;
+        foreach (var row in stale)
+        {
+            try
+            {
+                await repository.MarkFailedAsync(
+                    row.Id,
+                    $"Abandoned: no progress for more than {_options.StaleReportTimeoutMinutes} minutes. The worker likely stopped mid-job.",
+                    DateTimeOffset.UtcNow,
+                    cancellationToken);
+
+                failed++;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to mark stale report {ReportId}; will retry on the next sweep", row.Id);
+            }
+        }
+
+        if (failed > 0)
+        {
+            _logger.LogWarning("Marked {Count} abandoned report(s) as failed (no progress since {Cutoff:o})", failed, cutoff);
+        }
+    }
+}

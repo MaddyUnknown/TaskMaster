@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>TaskMaster.Demo.Consumer</RootNamespace>
+    <UserSecretsId>8bf29a73-2e3b-4409-87c5-3abc81b47041</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Demo-owned persistence. One table, plain EF LINQ, both engines supported. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.27" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.27" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\TaskMaster.Library.Consumer\TaskMaster.Library.Consumer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Plain Microsoft.NET.Sdk does not copy appsettings.json to the output directory the
+         way Microsoft.NET.Sdk.Web does, but Host.CreateApplicationBuilder reads
+         configuration from its content root (AppContext.BaseDirectory). Without this the
+         worker starts with an empty configuration when run from bin\, and
+         TaskMaster:ApiBaseUrl never reaches the SDK. -->
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
