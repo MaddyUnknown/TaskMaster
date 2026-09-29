@@ -49,16 +49,17 @@ namespace TaskMaster.API.Persistence.PostgreSql
                         ""ModifyDateTime"" = {currentDateTime}
                     FROM cte c
                     WHERE j.""Id"" = c.""JobId""
-                    RETURNING j.""Id""
+                    RETURNING j.""Id"", j.""JobPublicId"", j.""Payload"", j.""Status"", j.""JobTypeId"",
+                              j.""AssignedWorkerId"", j.""CreatedDateTime"", j.""ModifyDateTime""
                 )
-                SELECT j.""Id"", j.""JobPublicId"", j.""Payload"", j.""Status"", j.""JobTypeId"", j.""AssignedWorkerId"",
-                       j.""CreatedDateTime"", j.""ModifyDateTime"",
+                SELECT ji.""Id"", ji.""JobPublicId"", ji.""Payload"", ji.""Status"",
+                       ji.""JobTypeId"", ji.""AssignedWorkerId"",
+                       ji.""CreatedDateTime"", ji.""ModifyDateTime"",
                        jt.""Id"" AS ""JobType_Id"", jt.""Name"" AS ""JobType_Name"", jt.""Version"" AS ""JobType_Version"",
                        jt.""Schema"" AS ""JobType_Schema"", jt.""Description"" AS ""JobType_Description"",
                        jt.""CreatedDateTime"" AS ""JobType_CreatedDateTime"", jt.""ModifyDateTime"" AS ""JobType_ModifyDateTime""
-                FROM ""Jobs"" j
-                INNER JOIN ""JobTypes"" jt ON jt.""Id"" = j.""JobTypeId""
-                INNER JOIN jobIds selectedJob ON j.""Id"" = selectedJob.""Id"";
+                FROM jobIds ji
+                INNER JOIN ""JobTypes"" jt ON jt.""Id"" = ji.""JobTypeId"";
             ";
 
             var result = await _context.Database
@@ -95,9 +96,9 @@ namespace TaskMaster.API.Persistence.PostgreSql
             FormattableString sql = $@"
                 UPDATE ""Jobs"" AS j
                 SET
-                    j.""Status"" = {(int)JobStatusEnum.Queued},
-                    j.""AssignedWorkerId"" = NULL,
-                    j.""ModifyDateTime"" = {currentDateTime}
+                    ""Status"" = {(int)JobStatusEnum.Queued},
+                    ""AssignedWorkerId"" = NULL,
+                    ""ModifyDateTime"" = {currentDateTime}
                 FROM ""Workers"" w
                 WHERE w.""Id"" = j.""AssignedWorkerId""
                 AND w.""Status"" = {(int)WorkerStatusEnum.InActive}
