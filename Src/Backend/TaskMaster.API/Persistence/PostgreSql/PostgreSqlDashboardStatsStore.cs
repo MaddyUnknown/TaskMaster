@@ -22,12 +22,12 @@ namespace TaskMaster.API.Persistence.PostgreSql
                 var result = await _context.Database
                     .SqlQuery<DashboardCounts>(
                         $@"SELECT
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Queued}) AS QueuedJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.InProgress}) AS InProgressJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Completed}) AS CompletedJobs,
-                            (SELECT COUNT(*) FROM Jobs WHERE Status = {(int)JobStatusEnum.Failed}) AS FailedJobs,
-                            (SELECT COUNT(*) FROM Workers WHERE Status = {(int)WorkerStatusEnum.Active}) AS ActiveWorkers,
-                            (SELECT COUNT(*) FROM Workers WHERE Status = {(int)WorkerStatusEnum.InActive}) AS InactiveWorkers"
+                            (SELECT COUNT(*) FROM ""Jobs"" WHERE ""Status"" = {(int)JobStatusEnum.Queued}) AS ""QueuedJobs"",
+                            (SELECT COUNT(*) FROM ""Jobs"" WHERE ""Status"" = {(int)JobStatusEnum.InProgress}) AS ""InProgressJobs"",
+                            (SELECT COUNT(*) FROM ""Jobs"" WHERE ""Status"" = {(int)JobStatusEnum.Completed}) AS ""CompletedJobs"",
+                            (SELECT COUNT(*) FROM ""Jobs"" WHERE ""Status"" = {(int)JobStatusEnum.Failed}) AS ""FailedJobs"",
+                            (SELECT COUNT(*) FROM ""Workers"" WHERE ""Status"" = {(int)WorkerStatusEnum.Active}) AS ""ActiveWorkers"",
+                            (SELECT COUNT(*) FROM ""Workers"" WHERE ""Status"" = {(int)WorkerStatusEnum.InActive}) AS ""InactiveWorkers"""
                     )
                     .SingleAsync(cancellationToken);
 
@@ -53,60 +53,51 @@ namespace TaskMaster.API.Persistence.PostgreSql
 
         public async Task<IEnumerable<JobStatsItem>> GetHourlyJobStatsAsync(CancellationToken cancellationToken = default)
         {
-            var raw = await _context.Database.SqlQuery<HourlyCount>(
-                $@"DECLARE @CurrentBucketStart DATETIME2 = DATEADD(
-                    HOUR,
-                    (DATEDIFF(HOUR, 0, SYSDATETIME()) / 2) * 2,
-                    0
-                );
-
-                
+            var raw = await _context.Database.SqlQuery<HourlyCount>($@"
                 WITH RECURSIVE Params AS
                 (
                     SELECT
                         DATE_TRUNC('hour', CURRENT_TIMESTAMP)
                         - (EXTRACT(hour FROM CURRENT_TIMESTAMP)::int % 2) * INTERVAL '1 hour'
-                        AS CurrentBucketStart
+                        AS ""CurrentBucketStart""
                 ),
                 Buckets AS
                 (
                      SELECT
-                        CurrentBucketStart - INTERVAL '22 hours' AS BucketStart
+                        ""CurrentBucketStart"" - INTERVAL '22 hours' AS ""BucketStart""
                     FROM Params
 
                     UNION ALL
 
                     SELECT
-                        b.BucketStart + INTERVAL '2 hours'
+                        b.""BucketStart"" + INTERVAL '2 hours'
                     FROM Buckets b
                     CROSS JOIN Params p
-                    WHERE b.BucketStart < p.CurrentBucketStart
+                    WHERE b.""BucketStart"" < p.""CurrentBucketStart""
                 ),
                 JobCounts AS
                 (
                     SELECT
-                        DATE_TRUNC('hour', j.CreatedDateTime)
-                        - (EXTRACT(hour FROM j.CreatedDateTime)::int % 2) * INTERVAL '1 hour'
-                        AS BucketStart,
-                        COUNT(*) AS job_count
-                    FROM Jobs j
-                    CROSS JOIN params p
+                        DATE_TRUNC('hour', j.""CreatedDateTime"") - (EXTRACT(hour FROM j.""CreatedDateTime"")::int % 2) * INTERVAL '1 hour' AS ""BucketStart"",
+                        COUNT(*) AS ""JobCount""
+                    FROM ""Jobs"" j
+                    CROSS JOIN Params p
                     WHERE
-                        j.CreatedDateTime >= p.CurrentBucketStart - INTERVAL '22 hours'
-                        AND j.CreatedDateTime < CURRENT_TIMESTAMP
+                        j.""CreatedDateTime"" >= p.""CurrentBucketStart"" - INTERVAL '22 hours'
+                        AND j.""CreatedDateTime"" < CURRENT_TIMESTAMP
                     GROUP BY
-                        DATE_TRUC('hour', j.CreatedDateTime)
-                        - (EXTRACT(hour FROM j.CreatedDateTime)::int % 2) * INTERVAL '1 hour'
+                        DATE_TRUC('hour', j.""CreatedDateTime"")
+                        - (EXTRACT(hour FROM j.""CreatedDateTime"")::int % 2) * INTERVAL '1 hour'
                 )
                 SELECT
-                    b.BucketStart,
-                    b.bucket_start + INTERVAL '2 hours' BucketEnd,
-                    TO_CHAR(b.BucketStart, 'HH24:MI') AS BucketHour,
-                    COALESCE(j.JobCount, 0) AS JobCount
+                    b.""BucketStart"",
+                    b.""BucketStart"" + INTERVAL '2 hours' ""BucketEnd"",
+                    TO_CHAR(b.""BucketStart"", 'HH24:MI') AS ""BucketHour"",
+                    COALESCE(j.JobCount, 0) AS ""JobCount""
                 FROM Buckets b
                 LEFT JOIN JobCounts j
-                    ON b.BucketStart = j.BucketStart
-                ORDER BY b.BucketStart;"
+                    ON b.""BucketStart"" = j.""BucketStart""
+                ORDER BY b.""BucketStart"";"
             ).ToListAsync(cancellationToken);
 
             return raw.Select(r => new JobStatsItem

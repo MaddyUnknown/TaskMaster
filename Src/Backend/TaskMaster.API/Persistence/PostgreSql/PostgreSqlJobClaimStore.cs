@@ -26,39 +26,39 @@ namespace TaskMaster.API.Persistence.PostgreSql
             FormattableString sql = $@"
                 WITH cte AS
                 (
-                    SELECT j.Id AS JobId, w.Id AS WorkerId
-                    FROM Workers w
-                    INNER JOIN WorkerCapabilities wc
-                        ON wc.WorkerId = w.Id
-                        AND w.WorkerPublicId = {workerPublicId}
-                        AND WorkerExpiresAtTimestamp > {currentDateTime}
-                        AND Status = {(int)WorkerStatusEnum.Active}
-                    INNER JOIN Jobs j
-                        ON j.JobTypeId = wc.JobTypeId
-                    WHERE j.Status = {(int)JobStatusEnum.Queued}
-                    ORDER BY j.Id
+                    SELECT j.""Id"" AS ""JobId"", w.""Id"" AS ""WorkerId""
+                    FROM ""Workers"" w
+                    INNER JOIN ""WorkerCapabilities"" wc
+                        ON wc.""WorkerId"" = w.""Id""
+                        AND w.""WorkerPublicId"" = {workerPublicId}
+                        AND ""WorkerExpiresAtTimestamp"" > {currentDateTime}
+                        AND ""Status"" = {(int)WorkerStatusEnum.Active}
+                    INNER JOIN ""Jobs"" j
+                        ON j.""JobTypeId"" = wc.""JobTypeId""
+                    WHERE j.""Status"" = {(int)JobStatusEnum.Queued}
+                    ORDER BY j.""Id""
                     LIMIT {maxJobs}
                     FOR UPDATE OF j SKIP LOCKED
                 ),
                 jobIds AS
                 (
-                    UPDATE Jobs j
+                    UPDATE ""Jobs"" j
                     SET
-                        Status = {(int)JobStatusEnum.InProgress},
-                        AssignedWorkerId = c.WorkerId,
-                        ModifyDateTime = {currentDateTime}
+                        ""Status"" = {(int)JobStatusEnum.InProgress},
+                        ""AssignedWorkerId"" = c.""WorkerId"",
+                        ""ModifyDateTime"" = {currentDateTime}
                     FROM cte c
-                    WHERE j.Id = c.JobId
-                    RETURNING j.Id
+                    WHERE j.""Id"" = c.""JobId""
+                    RETURNING j.""Id""
                 )
-                SELECT j.Id, j.JobPublicId, j.Payload, j.""Status"", j.JobTypeId, j.AssignedWorkerId,
-                       j.CreatedDateTime, j.ModifyDateTime,
-                       jt.Id AS JobType_Id, jt.Name AS JobType_Name, jt.Version AS JobType_Version,
-                       jt.""Schema"" AS JobType_Schema, jt.Description AS JobType_Description,
-                       jt.CreatedDateTime AS JobType_CreatedDateTime, jt.ModifyDateTime AS JobType_ModifyDateTime
-                FROM Jobs j
-                INNER JOIN JobTypes jt ON jt.Id = j.JobTypeId
-                INNER JOIN jobIds selectedJob ON j.Id = selectedJob.Id;
+                SELECT j.""Id"", j.""JobPublicId"", j.""Payload"", j.""Status"", j.""JobTypeId"", j.""AssignedWorkerId"",
+                       j.""CreatedDateTime"", j.""ModifyDateTime"",
+                       jt.""Id"" AS ""JobType_Id"", jt.""Name"" AS ""JobType_Name"", jt.""Version"" AS ""JobType_Version"",
+                       jt.""Schema"" AS ""JobType_Schema"", jt.""Description"" AS ""JobType_Description"",
+                       jt.""CreatedDateTime"" AS ""JobType_CreatedDateTime"", jt.""ModifyDateTime"" AS ""JobType_ModifyDateTime""
+                FROM ""Jobs"" j
+                INNER JOIN ""JobTypes"" jt ON jt.""Id"" = j.""JobTypeId""
+                INNER JOIN jobIds selectedJob ON j.""Id"" = selectedJob.""Id"";
             ";
 
             var result = await _context.Database
@@ -93,15 +93,15 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var currentDateTime = DateTime.UtcNow;
 
             FormattableString sql = $@"
-                UPDATE Jobs j
+                UPDATE ""Jobs"" j
                 SET
-                    j.Status = {(int)JobStatusEnum.Queued},
-                    j.AssignedWorkerId = NULL,
-                    j.ModifyDateTime = {currentDateTime}
-                FROM Workers w
-                WHERE w.Id = j.AssignedWorkerId
-                AND w.Status = {(int)WorkerStatusEnum.InActive}
-                AND j.Status = {(int)JobStatusEnum.InProgress};
+                    j.""Status"" = {(int)JobStatusEnum.Queued},
+                    j.""AssignedWorkerId"" = NULL,
+                    j.""ModifyDateTime"" = {currentDateTime}
+                FROM ""Workers"" w
+                WHERE w.""Id"" = j.""AssignedWorkerId""
+                AND w.""Status"" = {(int)WorkerStatusEnum.InActive}
+                AND j.""Status"" = {(int)JobStatusEnum.InProgress};
             ";
 
             return _context.Database.ExecuteSqlInterpolatedAsync(sql, cancellationToken);
@@ -110,12 +110,12 @@ namespace TaskMaster.API.Persistence.PostgreSql
         public Task<int> UnassignJobsForWorkerIdAsync(long workerId, CancellationToken cancellationToken = default)
         {
             FormattableString sql = $@"
-                UPDATE Jobs SET
-                    Status = {(int)JobStatusEnum.Queued},
-                    AssignedWorkerId = NULL,
-                    ModifyDateTime = {DateTime.UtcNow}
-                WHERE AssignedWorkerId = {workerId}
-                AND Status = {(int)JobStatusEnum.InProgress};
+                UPDATE ""Jobs"" SET
+                    ""Status"" = {(int)JobStatusEnum.Queued},
+                    ""AssignedWorkerId"" = NULL,
+                    ""ModifyDateTime"" = {DateTime.UtcNow}
+                WHERE ""AssignedWorkerId"" = {workerId}
+                AND ""Status"" = {(int)JobStatusEnum.InProgress};
             ";
 
             return _context.Database.ExecuteSqlInterpolatedAsync(sql, cancellationToken);
