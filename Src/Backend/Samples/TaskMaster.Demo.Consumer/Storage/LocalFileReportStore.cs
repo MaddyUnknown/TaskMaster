@@ -3,17 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace TaskMaster.Demo.Consumer.Storage;
 
-/// <summary>
-/// Local-filesystem implementation of <see cref="IReportFileStore"/>.
-///
-/// Keys are laid out as <c>{yyyy}/{MM}/{reportId}.{ext}</c> — a relative, path-agnostic
-/// key that is equally valid as an S3 or Azure Blob key, so the same column can back an
-/// object store later. Writes are atomic (temp file + move) so the web tier can never
-/// serve a half-written report.
-///
-/// TaskMaster.Demo.Web holds an identical copy: it must produce the same keys from the
-/// same root, because that is what lets it serve what this process wrote.
-/// </summary>
 public sealed class LocalFileReportStore : IReportFileStore
 {
     private readonly string _root;
@@ -24,18 +13,11 @@ public sealed class LocalFileReportStore : IReportFileStore
     {
         options.Validate();
 
-        // Resolved once: the key layout stays relative, the physical root is absolute.
         _root = Path.GetFullPath(options.RootPath);
         _maxFileBytes = options.MaxFileBytes;
         _logger = logger;
 
-        // A relative Storage:RootPath resolves against the current working directory, so
-        // this process and TaskMaster.Demo.Web can silently end up on different roots.
-        // Logging the resolved path in both makes that divergence visible in the startup
-        // output instead of surfacing later as a 404 on the download.
-        _logger.LogInformation(
-            "Report store using provider {Provider} and root {StorageRoot} (max {MaxFileBytes} bytes per file)",
-            options.Provider, _root, _maxFileBytes);
+        _logger.LogInformation("Report store using provider {Provider} and root {StorageRoot} (max {MaxFileBytes} bytes per file)", options.Provider, _root, _maxFileBytes);
     }
 
     public async Task<StoredReport> SaveAsync(Guid reportId, string fileName, string content, CancellationToken cancellationToken)
@@ -107,7 +89,6 @@ public sealed class LocalFileReportStore : IReportFileStore
         return Task.FromResult(true);
     }
 
-    /// <summary>Resolves a key to an absolute path, rejecting anything outside the root.</summary>
     private string ResolvePath(string storageKey)
     {
         return TryResolvePath(storageKey)

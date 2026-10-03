@@ -4,15 +4,6 @@ using TaskMaster.Demo.Web.Storage;
 
 namespace TaskMaster.Demo.Web.BackgroundServices;
 
-/// <summary>
-/// Enforces the demo's one-time result lifetime. The consumer writes the CSV to the
-/// file store and marks the row Completed; this service removes both after
-/// <c>Demo:ReportRetentionHours</c> (24 by default), so a report is a genuinely
-/// short-lived artefact rather than accumulating in a sample app.
-///
-/// The file is deleted before the row, so a surviving row can never point at a missing
-/// file. Failures on individual rows are logged and the sweep continues.
-/// </summary>
 public sealed class ReportRetentionService : BackgroundService
 {
     private const int MaxRowsPerSweep = 200;
@@ -21,10 +12,7 @@ public sealed class ReportRetentionService : BackgroundService
     private readonly DemoOptions _options;
     private readonly ILogger<ReportRetentionService> _logger;
 
-    public ReportRetentionService(
-        IServiceScopeFactory scopeFactory,
-        DemoOptions options,
-        ILogger<ReportRetentionService> logger)
+    public ReportRetentionService(IServiceScopeFactory scopeFactory, DemoOptions options, ILogger<ReportRetentionService> logger)
     {
         _scopeFactory = scopeFactory;
         _options = options;

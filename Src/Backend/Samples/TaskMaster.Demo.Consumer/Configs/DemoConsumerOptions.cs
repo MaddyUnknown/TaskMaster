@@ -8,20 +8,12 @@ public sealed class DemoConsumerOptions
     public long MaxResultBytes { get; set; } = 1024 * 1024;
     public int MaxExecutionSeconds { get; set; } = 120;
 
-    /// <summary>Small artificial per-row delay so job progress is observable in the demo.</summary>
     public int RowDelayMilliseconds { get; set; } = 2;
 
     public string WorkerName { get; set; } = "demo-report-worker";
 
-    /// <summary>
-    /// How long a report may sit in Running before it is presumed abandoned. Guards
-    /// against a previous run of this worker dying mid-handler, which would otherwise
-    /// leave the web UI polling a row that never resolves. Must comfortably exceed
-    /// <see cref="MaxExecutionSeconds"/>.
-    /// </summary>
     public int StaleReportTimeoutMinutes { get; set; } = 10;
 
-    /// <summary>How often the stale-row sweep runs.</summary>
     public int StaleSweepMinutes { get; set; } = 5;
 
     public void Validate()

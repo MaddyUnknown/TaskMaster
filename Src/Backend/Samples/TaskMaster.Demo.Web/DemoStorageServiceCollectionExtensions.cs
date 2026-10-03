@@ -4,11 +4,6 @@ namespace TaskMaster.Demo.Web;
 
 public static class DemoStorageServiceCollectionExtensions
 {
-    /// <summary>
-    /// Registers the configured report file store. Selecting an unimplemented provider
-    /// throws here rather than failing later, so a misconfigured deployment is obvious
-    /// at startup.
-    /// </summary>
     public static IServiceCollection AddDemoStorage(this IServiceCollection services, IConfiguration configuration)
     {
         var options = configuration.GetSection(StorageOptions.SectionName).Get<StorageOptions>() ?? new StorageOptions();

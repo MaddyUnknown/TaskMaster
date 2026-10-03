@@ -56,7 +56,6 @@ public sealed class EfReportRepository : IReportRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-    /// <summary>Matches the column width declared in <see cref="DemoDbContext"/>.</summary>
     private static string Truncate(string reason)
     {
         const int maxLength = 1000;

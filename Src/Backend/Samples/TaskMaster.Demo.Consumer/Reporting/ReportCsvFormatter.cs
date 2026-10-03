@@ -7,7 +7,6 @@ public sealed record FormattedReport(string Content, int RowCount, bool Truncate
 
 public interface IReportCsvFormatter
 {
-    /// <summary>Formats a report as CSV, constrained to <paramref name="maxBytes"/> UTF-8 bytes.</summary>
     FormattedReport Format(SyntheticReport report, long maxBytes);
 }
 

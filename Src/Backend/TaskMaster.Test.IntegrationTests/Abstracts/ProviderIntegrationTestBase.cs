@@ -8,11 +8,10 @@ namespace TaskMaster.Test.IntegrationTests.Abstracts;
 
 public abstract class ProviderIntegrationTestBase
 {
+    private ITestProvider? _testProvider;
     private ServiceProvider? _serviceProvider;
 
     protected ITestProvider TestProvider => _testProvider ?? throw new InvalidOperationException("The test provider has not been resolved yet");
-
-    private ITestProvider? _testProvider;
 
     protected IServiceProvider ServiceProvider => _serviceProvider ?? throw new InvalidOperationException("The integration test service provider has not been initialized");
 
@@ -20,18 +19,15 @@ public abstract class ProviderIntegrationTestBase
     public async Task OneTimeSetUpAsync()
     {
         var configuration = DependencyContainerBuilder.GetConfiguration();
-        var testProvider = TestProviderFactory.CreateForCurrentRun(configuration);
-        _testProvider = testProvider;
+        _testProvider = TestProviderFactory.CreateForCurrentRun(configuration);
 
-        if (testProvider.ResolveConnectionString(configuration) is null)
+        if (_testProvider.ResolveConnectionString(configuration) is null)
         {
-            Assert.Ignore(
-                $"'{testProvider.Name}' is not configured. Set ConnectionStrings:{testProvider.ConnectionStringName} " +
-                $"to run the suite against {testProvider.Name}.");
+            Assert.Ignore($"'{_testProvider.Name}' is not configured. Set ConnectionStrings:{_testProvider.ConnectionStringName} to run the suite against {_testProvider.Name}.");
             return;
         }
 
-        _serviceProvider = DependencyContainerBuilder.GetServicesProvider(testProvider, configuration);
+        _serviceProvider = DependencyContainerBuilder.GetServicesProvider(_testProvider, configuration);
 
         await using var scope = _serviceProvider.CreateAsyncScope();
         var fixture = scope.ServiceProvider.GetRequiredService<DatabaseFixture>();
