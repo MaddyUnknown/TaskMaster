@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        
+
       # ------------------------------------------------------------------------------------------------------------------------------
       # Angular
       # ------------------------------------------------------------------------------------------------------------------------------
@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 8.0.x
-	
+
       - name: Restore & Build Backend
         run: dotnet build Src/Backend/TaskMaster.sln --configuration Release
 
@@ -71,17 +71,17 @@ jobs:
   
 
   # ==================================================================================================================================
-  # Unit test (provider independent
+  # Unit test (provider independent)
   # ================================================================================================================================== 
   unit-tests:
     name: Unit Test
     runs-on: ubuntu-latest
     needs: build
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-      
+
       # ------------------------------------------------------------------------------------------------------------------------------
       # .NET
       # ------------------------------------------------------------------------------------------------------------------------------
@@ -133,9 +133,8 @@ jobs:
       # SQL Server - only for SqlServer matrix leg
       # ------------------------------------------------------------------------------------------------------------------------------
       sqlserver:
-        if: ${{ matrix.provider == 'SqlServer' }}
         image: mcr.microsoft.com/mssql/server:2019-latest
-        
+
         env:
           MSSQL_SA_PASSWORD: ${{ secrets.CI_TEST_SA_PASSWORD }}
           ACCEPT_EULA: Y
@@ -154,7 +153,6 @@ jobs:
       # PostgreSQL - only for PostgreSql matrix leg
       # ------------------------------------------------------------------------------------------------------------------------------
       postgres:
-        if: ${{ matrix.provider == 'PostgreSql' }}
         image: postgres:16-alpine
 
         env:
@@ -225,10 +223,11 @@ jobs:
   # This job always runs and fails if either matrix leg fails. Useful as a single required branch-protection check.
   # ===================================================================================================================================
   build-test-success:
-    name: CI Success
+    name: Build & Test Success
     runs-on: ubuntu-latest
     needs:
       - build
+      - unit-tests
       - integration-tests
 
     if: ${{ always() }}
