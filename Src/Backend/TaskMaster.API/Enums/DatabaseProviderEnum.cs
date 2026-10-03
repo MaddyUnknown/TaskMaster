@@ -2,7 +2,8 @@ namespace TaskMaster.API.Enums
 {
     public enum DatabaseProviderEnum
     {
-        SqlServer = 0,
-        PostgreSql = 1
+        Unknown = 0,
+        SqlServer = 1,
+        PostgreSql = 2
     }
 }

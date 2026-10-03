@@ -4,21 +4,10 @@ public sealed class StorageOptions
 {
     public const string SectionName = "Storage";
 
-    /// <summary>
-    /// Storage backend. Only <c>Local</c> is implemented. <c>S3</c> and <c>AzureBlob</c>
-    /// are the intended targets of the <see cref="IReportFileStore"/> seam; selecting
-    /// one fails fast rather than silently falling back.
-    /// </summary>
     public string Provider { get; set; } = "Local";
 
-    /// <summary>
-    /// Root directory for the <c>Local</c> provider. Must be identical in
-    /// TaskMaster.Demo.Web and TaskMaster.Demo.Consumer, because the consumer writes the
-    /// file and the web tier serves it.
-    /// </summary>
     public string RootPath { get; set; } = "./storage/reports";
 
-    /// <summary>Hard ceiling on a single stored file. Larger content is rejected rather than written.</summary>
     public long MaxFileBytes { get; set; } = 8L * 1024 * 1024;
 
     public const string LocalProvider = "Local";

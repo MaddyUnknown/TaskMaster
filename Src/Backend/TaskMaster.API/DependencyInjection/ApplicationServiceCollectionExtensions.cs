@@ -24,9 +24,7 @@ namespace TaskMaster.API.DependencyInjection
 {
     public static class ApplicationServiceCollectionExtensions
     {
-        public static IServiceCollection AddTaskMasterApplication(
-            this IServiceCollection services,
-            IConfiguration configuration)
+        public static IServiceCollection AddTaskMasterApplication(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddOptions<WorkerConfig>().Bind(configuration.GetSection(WorkerConfig.SectionName));
 

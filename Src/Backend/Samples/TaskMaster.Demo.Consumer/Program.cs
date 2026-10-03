@@ -104,10 +104,9 @@ public static class Program
         {
             // Normal shutdown.
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
             await Console.Error.WriteLineAsync($"\nError: {ex.Message}");
-            await Console.Error.WriteLineAsync("Make sure the TaskMaster API is running and reachable.");
             Environment.ExitCode = 1;
         }
     }

@@ -1,0 +1,248 @@
+name: Build & Test
+
+on:
+  push:
+    branches: [develop, master]
+
+  pull_request:
+    branches: [develop, master]
+
+jobs:
+  # ==================================================================================================================================
+  # Build everything once
+  # ================================================================================================================================== 
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Angular
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Src/Frontend/TaskMaster.UI/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: Src/Frontend/TaskMaster.UI
+        run: npm ci
+
+      - name: Build Frontend
+        working-directory: Src/Frontend/TaskMaster.UI
+        run: npm run build
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # .NET
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore & Build Backend
+        run: dotnet build Src/Backend/TaskMaster.sln --configuration Release
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Unit Tests
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Run Unit Tests
+        run: dotnet test Src/Backend/TaskMaster.Test.UnitTests --configuration Release --no-build --no-restore --verbosity normal
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Upload compiled backend
+      #
+      # Integration-test jobs run on different runners, so they need the compiled output from this job.
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Upload Backend Build
+        uses: actions/upload-artifact@v6
+        with:
+          name: backend-build
+          path: |
+            Src/Backend/**/bin/Release/
+            Src/Backend/**/obj/Release/
+          if-no-files-found: error
+          retention-days: 1
+  
+
+  # ==================================================================================================================================
+  # Unit test (provider independent)
+  # ================================================================================================================================== 
+  unit-tests:
+    name: Unit Test
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # .NET
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Restore dependencies
+      #
+      # The build artifact contains compiled output, but NuGet packages are not guaranteed to be sufficient for dotnet test execution.
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Restore Backend
+        run: dotnet restore Src/Backend/TaskMaster.sln
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Download compiled output from build job
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Download Backend Build
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build
+          path: Src/Backend   
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Unit Tests
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Run Unit Tests
+        run: dotnet test Src/Backend/TaskMaster.Test.UnitTests --configuration Release --no-build --no-restore --verbosity normal
+
+
+  # ==================================================================================================================================
+  # Run integration tests against each supported DB provider
+  # ==================================================================================================================================
+  integration-tests:
+    name: Integration Test (${{ matrix.provider }})
+    runs-on: ubuntu-latest
+    needs: build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [SqlServer, PostgreSql]
+
+    services:
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # SQL Server - only for SqlServer matrix leg
+      # ------------------------------------------------------------------------------------------------------------------------------
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+
+        env:
+          MSSQL_SA_PASSWORD: ${{ secrets.CI_TEST_SA_PASSWORD }}
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+
+        ports:
+          - 1433:1433
+
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$MSSQL_SA_PASSWORD\" -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 20
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # PostgreSQL - only for PostgreSql matrix leg
+      # ------------------------------------------------------------------------------------------------------------------------------
+      postgres:
+        image: postgres:16-alpine
+
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: ${{ secrets.CI_TEST_POSTGRES_PASSWORD }}
+          POSTGRES_DB: TaskMaster_IntegrationTesting
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U postgres -d TaskMaster_IntegrationTesting"
+          --health-interval 10s
+          --health-timeout 10s
+          --health-retries 20
+
+    env:
+
+      # Integration test provider selection
+      Database__Provider: ${{ matrix.provider }}
+
+      # SQL Server connection
+      ConnectionStrings__SqlServerTesting: Server=localhost,1433;Database=TaskMaster_IntegrationTesting;User Id=sa;Password=${{ secrets.CI_TEST_SA_PASSWORD }};TrustServerCertificate=True;
+
+      # PostgreSQL connection
+      ConnectionStrings__PostgreSqlTesting: Host=localhost;Port=5432;Database=TaskMaster_IntegrationTesting;Username=postgres;Password=${{ secrets.CI_TEST_POSTGRES_PASSWORD }}
+
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # .NET
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      # -------------------------------------------------------------------------------------------------------------------------------
+      # Restore dependencies
+      #
+      # The build artifact contains compiled output, but NuGet packages are not guaranteed to be sufficient for dotnet test execution.
+      # -------------------------------------------------------------------------------------------------------------------------------
+      - name: Restore Backend
+        run: dotnet restore Src/Backend/TaskMaster.sln
+
+      # -------------------------------------------------------------------------------------------------------------------------------
+      # Download compiled output from build job
+      # -------------------------------------------------------------------------------------------------------------------------------
+      - name: Download Backend Build
+        uses: actions/download-artifact@v7
+        with:
+          name: backend-build
+          path: Src/Backend
+
+      # -------------------------------------------------------------------------------------------------------------------------------
+      # Integration Tests
+      # -------------------------------------------------------------------------------------------------------------------------------
+      - name: Run Integration Tests
+        run: dotnet test Src/Backend/TaskMaster.Test.IntegrationTests --configuration Release --no-build --no-restore --verbosity normal
+
+
+  # ===================================================================================================================================
+  # Final CI gate
+  #
+  # This job always runs and fails if either matrix leg fails. Useful as a single required branch-protection check.
+  # ===================================================================================================================================
+  build-test-success:
+    name: Build & Test Success
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - unit-tests
+      - integration-tests
+
+    if: ${{ always() }}
+
+    steps:
+
+      - name: Check CI result
+        if: ${{needs.build.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'}}
+        run: |
+          echo "Build and test failed."
+          echo "Build result: ${{ needs.build.result }}"
+          echo "Unit test result: ${{ needs.unit-tests.result }}"
+          echo "Integration test result: ${{ needs.integration-tests.result }}"
+          exit 1
+
+      - name: CI successful
+        if: ${{needs.build.result == 'success' && needs.unit-tests == 'success' && needs.integration-tests.result == 'success'}}
+        run: echo "All build and test checks passed."

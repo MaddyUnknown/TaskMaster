@@ -10,18 +10,6 @@ using TaskMaster.Library.Consumer.Interfaces;
 
 namespace TaskMaster.Demo.Consumer.Handlers;
 
-/// <summary>
-/// Demo job handler: generates a synthetic sales report, writes it to the file store and
-/// marks the demo row Completed. Worker lifecycle, polling, heartbeats and
-/// completion/failure reporting in TaskMaster are owned by the existing Consumer SDK.
-///
-/// Returning normally completes the job in TaskMaster; throwing marks it Failed. The
-/// demo database row is updated in both cases, and it is the only channel between this
-/// process and the web tier — there is no callback HTTP call.
-///
-/// The scoped dependencies below resolve correctly because the SDK creates a scope per
-/// job before constructing the handler.
-/// </summary>
 public sealed class GenerateReportHandler : IJobHandler<ReportJobPayload>
 {
     private readonly IReportRepository _reports;
@@ -56,7 +44,6 @@ public sealed class GenerateReportHandler : IJobHandler<ReportJobPayload>
                 $"No demo report row exists for submission {payload.SubmissionId}. " +
                 "Start TaskMaster.Demo.Web first so the schema and row exist.");
 
-        // Already finished (e.g. the row was completed by an earlier run of this worker).
         if (row.Status is ReportProcessingStatus.Completed)
         {
             _logger.LogInformation("Report {ReportId} is already completed; nothing to do.", payload.SubmissionId);
@@ -75,8 +62,6 @@ public sealed class GenerateReportHandler : IJobHandler<ReportJobPayload>
             var report = _generator.Generate(payload, TimeSpan.FromSeconds(_options.MaxExecutionSeconds));
             var formatted = _formatter.Format(report, _options.MaxResultBytes);
 
-            // Store the file first, then record where it landed. A row is only ever
-            // marked Completed once the bytes are durably in place.
             var stored = await _fileStore.SaveAsync(
                 row.Id, $"report-{row.Id:N}.csv", formatted.Content, CancellationToken.None);
 
@@ -89,9 +74,6 @@ public sealed class GenerateReportHandler : IJobHandler<ReportJobPayload>
         }
         catch (Exception ex)
         {
-            // Record the reason before rethrowing, so the UI shows why it failed.
-            // Best effort: if this update also fails the job still reports Failed via
-            // the SDK, and the stale-row reconciler cleans up the row afterwards.
             try
             {
                 await _reports.MarkFailedAsync(row.Id, ex.Message, DateTimeOffset.UtcNow, CancellationToken.None);

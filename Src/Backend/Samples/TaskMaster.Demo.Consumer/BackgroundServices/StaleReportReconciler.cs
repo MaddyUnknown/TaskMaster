@@ -7,19 +7,6 @@ using TaskMaster.Demo.Consumer.Reports;
 
 namespace TaskMaster.Demo.Consumer.BackgroundServices;
 
-/// <summary>
-/// Fails reports abandoned by a previous run of this worker.
-///
-/// A handler that dies mid-flight (process killed, host crash) never reaches its
-/// <c>MarkFailedAsync</c>, so its row stays Running forever and the web UI polls it
-/// until the retention sweep removes it 24 hours later. This sweep closes that gap by
-/// failing any row still Running with no update for longer than
-/// <c>Demo:StaleReportTimeoutMinutes</c>.
-///
-/// Runs in the consumer because this process is the only writer of the Running state.
-/// The timeout is validated at startup to exceed the generation budget, so a healthy
-/// long job is never failed underneath itself.
-/// </summary>
 public sealed class StaleReportReconciler : BackgroundService
 {
     private const int MaxRowsPerSweep = 100;

@@ -4,26 +4,28 @@ namespace TaskMaster.Test.IntegrationTests.Providers;
 
 public static class TestProviderFactory
 {
-    public const string ProviderEnvironmentVariable = "TASKMASTER_TEST_PROVIDER";
-    public const string ProviderConfigurationKey = "TestDatabase:Provider";
-
-    public static ITestProvider Create(string? name) =>
-        Enum.TryParse<DatabaseProviderEnum>(name, ignoreCase: true, out var provider)
-            ? Create(provider)
-            : throw new ArgumentException(
-                $"'{name}' is not a supported test database provider. Use '{DatabaseProviderEnum.SqlServer}' or '{DatabaseProviderEnum.PostgreSql}'.");
-
-    public static ITestProvider Create(DatabaseProviderEnum provider) => provider switch
-    {
-        DatabaseProviderEnum.SqlServer => new SqlServerTestProvider(),
-        DatabaseProviderEnum.PostgreSql => new PostgreSqlTestProvider(),
-        _ => throw new ArgumentOutOfRangeException(nameof(provider), provider, "Unsupported test database provider.")
-    };
+    public const string ProviderConfigurationKey = "Database:Provider";
 
     public static ITestProvider CreateForCurrentRun(Microsoft.Extensions.Configuration.IConfiguration configuration)
     {
-        var name = Environment.GetEnvironmentVariable(ProviderEnvironmentVariable) ?? configuration[ProviderConfigurationKey];
+        var providerName = configuration[ProviderConfigurationKey];
+        return Create(providerName ?? string.Empty);
+    }
 
-        return Create(string.IsNullOrWhiteSpace(name) ? nameof(DatabaseProviderEnum.SqlServer) : name);
+    private static ITestProvider Create(string providerName)
+    {
+        if (Enum.TryParse(providerName, true, out DatabaseProviderEnum provider))
+        {
+            switch (provider)
+            {
+                case DatabaseProviderEnum.SqlServer: return new SqlServerTestProvider();
+                case DatabaseProviderEnum.PostgreSql: return new PostgreSqlTestProvider();
+                default: throw new ArgumentOutOfRangeException(nameof(providerName), provider, "Unsupported test database provider.");
+            }
+        }
+        else
+        {
+            throw new ArgumentOutOfRangeException(nameof(providerName), providerName, "Unsupported test database provider.");
+        }
     }
 }

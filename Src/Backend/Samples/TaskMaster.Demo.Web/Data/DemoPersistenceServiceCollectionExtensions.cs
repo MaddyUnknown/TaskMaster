@@ -11,11 +11,6 @@ public static class DemoPersistenceServiceCollectionExtensions
     public const string SqlServerProvider = "SqlServer";
     public const string PostgreSqlProvider = "PostgreSql";
 
-    /// <summary>
-    /// Registers the demo context for the configured engine. Provider-agnostic on
-    /// purpose: every query in <c>EfReportRepository</c> is plain LINQ, so the same
-    /// code path runs on SQL Server and PostgreSQL.
-    /// </summary>
     public static IServiceCollection AddDemoPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         var provider = ResolveProvider(configuration);

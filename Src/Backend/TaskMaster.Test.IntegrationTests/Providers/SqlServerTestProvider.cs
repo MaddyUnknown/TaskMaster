@@ -15,10 +15,7 @@ namespace TaskMaster.Test.IntegrationTests.Providers
         public string? ResolveConnectionString(IConfiguration configuration)
         {
             var configured = configuration.GetConnectionString(ConnectionStringName);
-            if (!string.IsNullOrWhiteSpace(configured)) return configured;
-
-            var legacy = configuration.GetConnectionString("IntegrationTesting");
-            return string.IsNullOrWhiteSpace(legacy) ? null : legacy;
+            return string.IsNullOrWhiteSpace(configured) ? null : configured;
         }
 
         public void ConfigureDbContext(DbContextOptionsBuilder options, string connectionString)

@@ -10,12 +10,6 @@ using TaskMaster.Library.Producer.Interfaces;
 
 namespace TaskMaster.Demo.Web.Controllers;
 
-/// <summary>
-/// BFF endpoints for the demo UI. This tier owns two things only: creating the report
-/// row and handing the job to the Producer SDK. It never learns anything from the
-/// consumer over HTTP — progress is read straight from the shared row, so a demo
-/// worker restart can never leave the UI polling a dead endpoint.
-/// </summary>
 [ApiController]
 [Route("api/demo")]
 public sealed class DemoController : ControllerBase
@@ -40,11 +34,6 @@ public sealed class DemoController : ControllerBase
         _options = options;
     }
 
-    /// <summary>
-    /// Creates the report row, then submits the TaskMaster job. The row is written
-    /// first so the consumer always has a target to update; if the Producer SDK fails
-    /// the row is marked Failed instead of being left dangling in Queued.
-    /// </summary>
     [HttpPost("reports")]
     [EnableRateLimiting("submit")]
     public async Task<IResult> SubmitReport([FromBody] ReportRequest request, CancellationToken cancellationToken)
@@ -95,7 +84,6 @@ public sealed class DemoController : ControllerBase
         });
     }
 
-    /// <summary>Polled by the UI until the status is Completed or Failed.</summary>
     [HttpGet("reports/{reportId:guid}")]
     public async Task<IResult> GetReport(Guid reportId, CancellationToken cancellationToken)
     {
@@ -120,13 +108,10 @@ public sealed class DemoController : ControllerBase
             sizeBytes = row.SizeBytes,
             truncated = row.Truncated,
             failureReason = row.FailureReason,
-            downloadUrl = row.Status == ReportProcessingStatus.Completed && !string.IsNullOrWhiteSpace(row.StorageKey)
-                ? $"/api/demo/reports/{row.Id}/download"
-                : null
+            downloadUrl = row.Status == ReportProcessingStatus.Completed && !string.IsNullOrWhiteSpace(row.StorageKey) ? $"/api/demo/reports/{row.Id}/download" : null
         });
     }
 
-    /// <summary>Preview of the generated CSV, capped for the browser.</summary>
     [HttpGet("reports/{reportId:guid}/result")]
     public async Task<IResult> GetReportResult(Guid reportId, CancellationToken cancellationToken)
     {
@@ -160,7 +145,6 @@ public sealed class DemoController : ControllerBase
         });
     }
 
-    /// <summary>Streams the stored file as an attachment. Not capped — this is the real file.</summary>
     [HttpGet("reports/{reportId:guid}/download")]
     public async Task<IResult> DownloadReport(Guid reportId, CancellationToken cancellationToken)
     {
@@ -187,19 +171,14 @@ public sealed class DemoController : ControllerBase
     private string CapPreview(string content)
     {
         var limit = Math.Max(1024, _options.ResultMaxBytes);
-        return Encoding.UTF8.GetByteCount(content) <= limit
-            ? content
-            : TruncateToBytes(content, limit);
+        return Encoding.UTF8.GetByteCount(content) <= limit ? content : TruncateToBytes(content, limit);
     }
 
     private static string TruncateToBytes(string content, int maxBytes)
     {
-        // Respect UTF-8 boundaries so the preview never ends mid-character.
         var limit = Math.Min(content.Length, maxBytes);
-        while (limit > 0 && Encoding.UTF8.GetByteCount(content.AsSpan(0, limit)) > maxBytes)
-        {
-            limit--;
-        }
+        while (limit > 0 && Encoding.UTF8.GetByteCount(content.AsSpan(0, limit)) > maxBytes) limit--;
+        while (limit > 0 && Encoding.UTF8.GetByteCount(content.AsSpan(0, limit)) > maxBytes) limit--;
 
         return content[..limit];
     }

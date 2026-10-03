@@ -23,18 +23,9 @@ public sealed record SyntheticReport(IReadOnlyList<ReportRow> Rows, ReportSummar
 
 public interface ISyntheticReportGenerator
 {
-    /// <summary>
-    /// Generates a deterministic synthetic sales report. Throws
-    /// <see cref="TimeoutException"/> when the execution budget is exceeded.
-    /// </summary>
     SyntheticReport Generate(ReportJobPayload payload, TimeSpan executionBudget);
 }
 
-/// <summary>
-/// Generates fully synthetic sales rows (no external side effects, no I/O).
-/// The same submission id always produces the same data, which keeps demos
-/// reproducible and tests simple.
-/// </summary>
 public sealed class SyntheticReportGenerator : ISyntheticReportGenerator
 {
     public static readonly string[] Regions = ["North", "South", "East", "West", "Central"];
