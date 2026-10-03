@@ -235,11 +235,11 @@ jobs:
     steps:
 
       - name: Check CI result
-        if: ${{needs.build.result != 'success' || needs.unit-tests != 'success' || needs.integration-tests.result != 'success'}}
+        if: ${{needs.build.result != 'success' || needs.unit-tests.result != 'success' || needs.integration-tests.result != 'success'}}
         run: |
           echo "Build and test failed."
           echo "Build result: ${{ needs.build.result }}"
-          echo "Unit test result: ${{ needs.unit-tests }}"
+          echo "Unit test result: ${{ needs.unit-tests.result }}"
           echo "Integration test result: ${{ needs.integration-tests.result }}"
           exit 1
 
