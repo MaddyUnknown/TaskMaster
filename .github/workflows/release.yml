@@ -25,13 +25,10 @@ jobs:
     env:
       VERSION: ${{ inputs.version }}
       DOTNET_CONFIGURATION: Release
-
-      # ------------------------------------------------------------------------------------------------------------------------------
-      # UPDATE THESE PATHS TO MATCH YOUR PROJECT
-      # ------------------------------------------------------------------------------------------------------------------------------
-      TASKMASTER_COORDINATOR_API_PROJECT: Src/Backend/TaskMaster.Api/TaskMaster.Api.csproj
-      DEMO_WEB_PROJECT: Src/Backend/TaskMaster.Demo.Web/TaskMaster.Demo.Web.csproj
-      DEMO_CONSUMER_PROJECT: Src/Backend/TaskMaster.Demo.Consumer/TaskMaster.Demo.Consumer.csproj
+      
+      TASKMASTER_COORDINATOR_API_PROJECT: Src/Backend/TaskMaster.API/TaskMaster.API.csproj
+      DEMO_WEB_PROJECT: Src/Backend/Samples/TaskMaster.Demo.Web/TaskMaster.Demo.Web.csproj
+      DEMO_CONSUMER_PROJECT: Src/Backend/Samples/TaskMaster.Demo.Consumer/TaskMaster.Demo.Consumer.csproj
 
     steps:
 
