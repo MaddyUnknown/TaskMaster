@@ -116,25 +116,32 @@ jobs:
       - name: Generate Release Manifest
         shell: bash
         run: |
-          cat > "TaskMaster-${VERSION}-manifest.txt" <<EOF
-          TaskMaster Release ${VERSION}
+          cat > "TaskMaster-${VERSION}-manifest.md" <<EOF
+          # TaskMaster Release ${VERSION}
 
-          Runtime:
-          .NET 8 framework-dependent
+          ## Runtime
 
-          Deployables:
-          - TaskMaster-Coordinator-API-${VERSION}.zip
-          - TaskMaster-Demo-Web-${VERSION}.zip
-          - TaskMaster-Demo-Consumer-${VERSION}.zip
-          - TaskMaster-UI-${VERSION}.zip
+          **.NET 8 framework-dependent**
 
-          Deployment:
+          ## Deployables
+
+          - \`TaskMaster-Coordinator-API-${VERSION}.zip\`
+          - \`TaskMaster-Demo-Web-${VERSION}.zip\`
+          - \`TaskMaster-Demo-Consumer-${VERSION}.zip\`
+          - \`TaskMaster-UI-${VERSION}.zip\`
+
+          ## Deployment
+
           These .NET applications are framework-dependent.
-          Install a compatible .NET 8 runtime on the target machine.
+
+          Install a compatible **.NET 8 runtime** on the target machine.
 
           Runtime identifiers were intentionally not specified.
-          The packages are therefore not tied to Windows/Linux/macOS
-          or x64/x86/ARM64.
+
+          The packages are therefore not tied to:
+
+          - Windows / Linux / macOS
+          - x64 / x86 / ARM64
           EOF
 
       # ====================================================================
@@ -170,6 +177,5 @@ jobs:
             TaskMaster-Coordinator-API-${VERSION}.zip \
             TaskMaster-Demo-Web-${VERSION}.zip \
             TaskMaster-Demo-Consumer-${VERSION}.zip \
-            "TaskMaster-${VERSION}-manifest.txt" \
             --title "TaskMaster ${VERSION}" \
-            --generate-notes
+            --notes-file "TaskMaster-${VERSION}-manifest.md"
