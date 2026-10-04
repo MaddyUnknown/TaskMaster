@@ -1,0 +1,184 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (without v), e.g. 1.0.0"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ==================================================================================================================================
+  # Create release packages
+  # ==================================================================================================================================
+  package:
+    name: Package Release
+    runs-on: ubuntu-latest
+    needs: build_test
+
+    # Release should only be created from master.
+    if: ${{ github.ref_name == 'master' }}
+
+    env:
+      VERSION: ${{ inputs.version }}
+      DOTNET_CONFIGURATION: Release
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # UPDATE THESE PATHS TO MATCH YOUR PROJECT
+      # ------------------------------------------------------------------------------------------------------------------------------
+      TASKMASTER_COORDINATOR_API_PROJECT: Src/Backend/TaskMaster.Api/TaskMaster.Api.csproj
+      DEMO_WEB_PROJECT: Src/Backend/TaskMaster.Demo.Web/TaskMaster.Demo.Web.csproj
+      DEMO_CONSUMER_PROJECT: Src/Backend/TaskMaster.Demo.Consumer/TaskMaster.Demo.Consumer.csproj
+
+    steps:
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Checkout the exact commit from which the release was requested.
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Frontend
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Src/Frontend/TaskMaster.UI/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: Src/Frontend/TaskMaster.UI
+        run: npm ci
+
+      - name: Build Angular
+        working-directory: Src/Frontend/TaskMaster.UI
+        run: ng build -c production
+
+      - name: Package Taskmaster UI
+        shell: bash
+        run: |
+          mkdir -p release/angular
+          cp -R Src/Frontend/TaskMaster.UI/dist/frontend/. release/taskmaster_ui/
+
+      - name: Archive Taskmaster UI
+        shell: bash
+        run: |
+          cd release
+          zip -r "../TaskMaster-UI-${VERSION}.zip" taskmaster_ui
+
+      # ------------------------------------------------------------------------------------------------------------------------------
+      # Backend
+      #
+      # IMPORTANT:
+      # No -r / --runtime is used.
+      # No --self-contained is used.
+      #
+      # Therefore these are framework-dependent and RID-neutral. The target machine must have a compatible .NET runtime installed.
+      # ------------------------------------------------------------------------------------------------------------------------------
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore Backend
+        run: dotnet restore Src/Backend/TaskMaster.sln
+
+      - name: Publish Taskmaster Coordinator API
+        run: dotnet publish "${TASKMASTER_COORDINATOR_API_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/taskmaster_coordinator_api" --no-self-contained
+
+      - name: Publish Demo Web
+        run: dotnet publish "${DEMO_WEB_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/demo-web" --no-self-contained
+
+      - name: Publish Demo Consumer
+        run: dotnet publish "${DEMO_CONSUMER_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/demo-consumer" --no-self-contained
+
+      - name: Archive Taskmaster Coordinator API
+        run: |
+          cd release
+          zip -r "../TaskMaster-Coordinator-API-${VERSION}.zip" taskmaster_coordinator_api
+
+      - name: Archive Taskmaster Demo Web
+        run: |
+          cd release
+          zip -r "../TaskMaster-Demo-Web-${VERSION}.zip" demo-web
+
+      - name: Archive Taskmaster Demo Consumer
+        run: |
+          cd release
+          zip -r "../TaskMaster-Demo-Consumer-${VERSION}.zip" demo-consumer
+
+      # ====================================================================
+      # Release manifest
+      # ====================================================================
+
+      - name: Generate Release Manifest
+        shell: bash
+        run: |
+          cat > "TaskMaster-${VERSION}-manifest.txt" <<EOF
+          TaskMaster Release ${VERSION}
+
+          Runtime:
+          .NET 8 framework-dependent
+
+          Deployables:
+          - TaskMaster-API-${VERSION}.zip
+          - TaskMaster-Demo-Web-${VERSION}.zip
+          - TaskMaster-Demo-Consumer-${VERSION}.zip
+          - TaskMaster-UI-${VERSION}.zip
+
+          NuGet:
+          - Producer package
+          - Consumer package
+
+          Deployment:
+          These .NET applications are framework-dependent.
+          Install a compatible .NET 8 runtime on the target machine.
+
+          Runtime identifiers were intentionally not specified.
+          The packages are therefore not tied to Windows/Linux/macOS
+          or x64/x86/ARM64.
+          EOF
+
+      # ====================================================================
+      # Create Git tag
+      # ====================================================================
+
+      - name: Create Release Tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="v${VERSION}"
+
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q "${TAG}"; then
+            echo "Tag ${TAG} already exists."
+            exit 1
+          fi
+
+          git tag -a "${TAG}" -m "Release ${VERSION}"
+          git push origin "${TAG}"
+
+      # ====================================================================
+      # Create GitHub Release and upload assets
+      # ====================================================================
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "v${VERSION}" \
+            TaskMaster-UI-${VERSION}.zip \
+            TaskMaster-API-${VERSION}.zip \
+            TaskMaster-Producer-${VERSION}.zip \
+            TaskMaster-Consumer-${VERSION}.zip \
+            TaskMaster-Demo-Web-${VERSION}.zip \
+            TaskMaster-Demo-Consumer-${VERSION}.zip \
+            release/nuget/*.nupkg \
+            "TaskMaster-${VERSION}-manifest.txt" \
+            --title "TaskMaster ${VERSION}" \
+            --generate-notes
