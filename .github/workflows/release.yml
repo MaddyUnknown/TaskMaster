@@ -55,9 +55,9 @@ jobs:
         working-directory: Src/Frontend/TaskMaster.UI
         run: npm ci
 
-      - name: Build Angular
+      - name: Build Taskmaster UI
         working-directory: Src/Frontend/TaskMaster.UI
-        run: ng build -c production
+        run: npm run build -c production
 
       - name: Package Taskmaster UI
         shell: bash
