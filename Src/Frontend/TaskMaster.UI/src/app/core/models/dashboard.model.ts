@@ -55,6 +55,14 @@ export interface SystemMetrics {
 export interface JobStatsItem {
   bucketStart: string;
   bucketEnd: string;
-  bucketHour: string;
+  label: string;
   jobCount: number;
+}
+
+export interface JobStatsResponse {
+  timezone: string;
+  windowStartUtc: string;
+  windowEndUtc: string;
+  bucketSizeMinutes: number;
+  buckets: JobStatsItem[];
 }

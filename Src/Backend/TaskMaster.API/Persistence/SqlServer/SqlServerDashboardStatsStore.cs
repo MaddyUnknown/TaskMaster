@@ -1,8 +1,10 @@
+using System.Runtime.CompilerServices;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Persistence;
-using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 
 namespace TaskMaster.API.Persistence.SqlServer
 {
@@ -51,60 +53,43 @@ namespace TaskMaster.API.Persistence.SqlServer
             }
         }
 
-        public async Task<IEnumerable<JobStatsItem>> GetHourlyJobStatsAsync(CancellationToken cancellationToken = default)
+        public async Task<JobStatsResponse> GetHourlyJobStatsAsync(string timeZone, CancellationToken cancellationToken = default)
         {
-            var raw = await _context.Database.SqlQuery<HourlyCount>(
-                $@"DECLARE @CurrentBucketStart DATETIME2 = DATEADD(
-                    HOUR,
-                    (DATEDIFF(HOUR, 0, SYSDATETIME()) / 2) * 2,
-                    0
-                );
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+            var nowUtc = DateTime.UtcNow;
+            var buckets = JobStatsBucketer.CreateBuckets(timeZoneInfo, nowUtc);
 
-                WITH Buckets AS
-                (
-                    SELECT DATEADD(HOUR, -22, @CurrentBucketStart) AS BucketStart
-                    UNION ALL
-                    SELECT DATEADD(HOUR, 2, BucketStart)
-                    FROM Buckets
-                    WHERE BucketStart < @CurrentBucketStart
-                ),
-                JobCounts AS
-                (
-                    SELECT
-                        DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0) AS BucketStart,
-                        COUNT(*) AS JobCount
-                    FROM Jobs
-                    WHERE
-                        CreatedDateTime >= DATEADD(HOUR, -22, @CurrentBucketStart)
-                        AND CreatedDateTime < SYSDATETIME()
-                    GROUP BY
-                        DATEADD(HOUR,(DATEDIFF(HOUR, 0, CreatedDateTime) / 2) * 2,0)
-                )
-                SELECT
-                    b.BucketStart,
-                    DATEADD(HOUR, 2, b.BucketStart) BucketEnd,
-                    CONVERT(char(5), b.BucketStart, 108) BucketHour,
-                    ISNULL(j.JobCount, 0) AS JobCount
-                FROM Buckets b
-                LEFT JOIN JobCounts j
-                    ON b.BucketStart = j.BucketStart
-                ORDER BY b.BucketStart;"
-            ).ToListAsync(cancellationToken);
-
-            return raw.Select(r => new JobStatsItem
+            var args = new object[buckets.Count * 2];
+            var format = new StringBuilder("SELECT b.BucketIndex, COUNT(j.Id) AS JobCount FROM (VALUES ");
+            for (var i = 0; i < buckets.Count; i++)
             {
-                BucketStart = r.BucketStart,
-                BucketEnd = r.BucketEnd,
-                BucketHour = r.BucketHour,
-                JobCount = r.JobCount
-            });
+                if (i > 0)
+                {
+                    format.Append(", ");
+                }
+
+                format.Append($"({i}, {{{i * 2}}}, {{{i * 2 + 1}}})");
+                args[i * 2] = buckets[i].BucketStart;
+                args[i * 2 + 1] = buckets[i].BucketEnd;
+            }
+
+            format.Append(") AS b(BucketIndex, StartUtc, EndUtc) ");
+            format.Append("LEFT JOIN Jobs j ON j.CreatedDateTime >= b.StartUtc AND j.CreatedDateTime < b.EndUtc ");
+            format.Append("GROUP BY b.BucketIndex ORDER BY b.BucketIndex");
+
+            var raw = await _context.Database
+                .SqlQuery<BucketCount>(FormattableStringFactory.Create(format.ToString(), args))
+                .ToListAsync(cancellationToken);
+
+            return JobStatsBucketer.BuildResponse(
+                buckets,
+                raw.ToDictionary(r => r.BucketIndex, r => r.JobCount),
+                timeZoneInfo);
         }
 
-        private sealed class HourlyCount
+        private sealed class BucketCount
         {
-            public DateTime BucketStart { get; set; }
-            public DateTime BucketEnd { get; set; }
-            public string BucketHour { get; set; } = string.Empty;
+            public int BucketIndex { get; set; }
             public int JobCount { get; set; }
         }
 

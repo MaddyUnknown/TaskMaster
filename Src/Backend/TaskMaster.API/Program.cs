@@ -7,6 +7,7 @@ using TaskMaster.API.BackgroundServices;
 using TaskMaster.API.Data;
 using TaskMaster.API.DependencyInjection;
 using TaskMaster.API.Middleware;
+using TaskMaster.API.Serialization;
 
 namespace TaskMaster.API
 {
@@ -30,6 +31,7 @@ namespace TaskMaster.API
                 .AddJsonOptions(options =>
                 {
                     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.KebabCaseLower));
+                    options.JsonSerializerOptions.Converters.Add(new UtcDateTimeJsonConverter());
                 });
 
             builder.Services.Configure<ApiBehaviorOptions>(options =>

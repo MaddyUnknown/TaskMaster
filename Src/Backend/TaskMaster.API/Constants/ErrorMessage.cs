@@ -12,4 +12,5 @@ internal static class ErrorMessage
     internal static string ActiveWorkerAlreadyExists(string workerName) => $"Active worker with name '{workerName}' already exists";
     internal static string JobNotFound() => $"Job not found";
     internal static string PageAndPageSizeProvidedTogether() => $"Page and PageSize must either both be provided or both be omitted.";
+    internal static string InvalidTimeZone(string value) => $"'{value}' is not a valid IANA timezone identifier.";
 }

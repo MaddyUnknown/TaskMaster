@@ -3,6 +3,7 @@ using TaskMaster.API.Entities;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Persistence;
+using TaskMaster.API.Models.Dashboard;
 
 
 namespace TaskMaster.API.Queries
@@ -23,9 +24,9 @@ namespace TaskMaster.API.Queries
             return _statsStore.GetDashboardCountsAsync();
         }
 
-        public Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        public Task<JobStatsResponse> GetJobStatsAsync(string timeZone)
         {
-            return _statsStore.GetHourlyJobStatsAsync();
+            return _statsStore.GetHourlyJobStatsAsync(timeZone);
         }
 
         public async Task<List<SystemActivity>> GetRecentSystemActivitiesAsync(int count)

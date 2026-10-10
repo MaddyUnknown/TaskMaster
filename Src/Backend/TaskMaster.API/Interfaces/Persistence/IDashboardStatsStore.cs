@@ -1,4 +1,4 @@
-using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 
 namespace TaskMaster.API.Interfaces.Persistence
 {
@@ -6,6 +6,6 @@ namespace TaskMaster.API.Interfaces.Persistence
     {
         Task<DashboardData> GetDashboardCountsAsync(CancellationToken cancellationToken = default);
 
-        Task<IEnumerable<JobStatsItem>> GetHourlyJobStatsAsync(CancellationToken cancellationToken = default);
+        Task<JobStatsResponse> GetHourlyJobStatsAsync(string timeZone, CancellationToken cancellationToken = default);
     }
 }

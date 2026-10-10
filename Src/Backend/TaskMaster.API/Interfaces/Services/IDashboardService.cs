@@ -8,6 +8,6 @@ namespace TaskMaster.API.Interfaces.Services
         Task<IEnumerable<ActivityItem>> GetRecentActivityAsync(int totalItems);
         Task<SystemMetrics> GetSystemMetricsAsync();
         Task<SystemHealth> GetSystemHealthAsync();
-        Task<IEnumerable<JobStatsItem>> GetJobStatsAsync();
+        Task<JobStatsResponse> GetJobStatsAsync(string timeZone);
     }
 }

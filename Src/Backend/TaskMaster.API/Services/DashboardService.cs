@@ -1,4 +1,6 @@
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
+using TaskMaster.API.Interfaces;
 using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Dashboard;
@@ -8,11 +10,13 @@ namespace TaskMaster.API.Services
 {
     public class DashboardService : IDashboardService
     {
-        private IDashboardQuery _dashboardQuery;
+        private readonly IDashboardQuery _dashboardQuery;
+        private readonly IValidator<string> _timeZoneValidator;
 
-        public DashboardService(IDashboardQuery dashboardQuery)
+        public DashboardService(IDashboardQuery dashboardQuery, IValidator<string> timeZoneValidator)
         {
             _dashboardQuery = dashboardQuery;
+            _timeZoneValidator = timeZoneValidator;
         }
 
         public async Task<IEnumerable<ActivityItem>> GetRecentActivityAsync(int totalItems)
@@ -56,9 +60,15 @@ namespace TaskMaster.API.Services
             };
         }
 
-        public async Task<IEnumerable<JobStatsItem>> GetJobStatsAsync()
+        public async Task<JobStatsResponse> GetJobStatsAsync(string timeZone)
         {
-            return await _dashboardQuery.GetJobStatsAsync();
+            var errors = _timeZoneValidator.Validate(timeZone);
+            if (errors.Count > 0)
+            {
+                throw new ValidationException(errors);
+            }
+
+            return await _dashboardQuery.GetJobStatsAsync(timeZone);
         }
 
         public async Task<SystemHealth> GetSystemHealthAsync()
