@@ -1,7 +1,7 @@
 import { bootstrapApplication } from '@angular/platform-browser';
 import { appConfig } from './app/app.config';
 import { AppComponent } from './app/app.component';
-import { AppConfig, AuthConfig } from './app/core/models';
+import { AppConfig, AuthConfig, SystemInfo } from './app/core/models';
 import '@lottiefiles/dotlottie-wc';
 
 function loadAppConfig(): Promise<AppConfig> {
@@ -14,13 +14,24 @@ function loadAuthConfig(apiBaseUrl: string): Promise<AuthConfig> {
     .then((res) => res.data);
 }
 
+function loadSystemInfo(apiBaseUrl: string): Promise<SystemInfo> {
+  return fetch(`${apiBaseUrl}/system/info`)
+    .then((res) => res.json())
+    .then((res) => res.data)
+    .catch(() => ({ version: '—', environment: '—' }));
+}
+
 async function main() {
   // load authentication config
   const config = await loadAppConfig();
-  const authConfig = await loadAuthConfig(config.apiBaseUrl);
-  await bootstrapApplication(AppComponent, appConfig(config, authConfig)).catch(
-    (err) => console.error(err),
-  );
+  const [authConfig, systemInfo] = await Promise.all([
+    loadAuthConfig(config.apiBaseUrl),
+    loadSystemInfo(config.apiBaseUrl),
+  ]);
+  await bootstrapApplication(
+    AppComponent,
+    appConfig(config, authConfig, systemInfo),
+  ).catch((err) => console.error(err));
 }
 
 main();

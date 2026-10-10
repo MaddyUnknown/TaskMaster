@@ -27,6 +27,7 @@ import {
   JobCounts,
   WorkerCounts,
 } from '../models';
+import { AppConfigService } from './app-config.service';
 
 interface ApiResponse<T> {
   isSuccess: boolean;
@@ -152,7 +153,12 @@ interface WorkerPage {
 export class ApiService {
   private baseUrl = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    appConfigService: AppConfigService,
+  ) {
+    this.baseUrl = appConfigService.current.apiBaseUrl;
+  }
 
   private mapJob(j: BackendJob): Job {
     return {

@@ -14,6 +14,14 @@ export class AppConfigService {
     return this.config;
   }
 
+  get apiEndpoint(): string {
+    const baseUrl = this.config.apiBaseUrl;
+    if (/^https?:\/\//i.test(baseUrl)) {
+      return baseUrl;
+    }
+    return new URL(baseUrl, window.location.origin).href;
+  }
+
   load(appConfig: AppConfig): void {
     this.config = { ...this.config, ...appConfig };
   }
