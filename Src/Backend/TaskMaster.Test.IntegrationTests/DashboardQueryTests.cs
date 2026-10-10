@@ -1,10 +1,11 @@
 using Microsoft.Extensions.DependencyInjection;
+using System.Linq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 using TaskMaster.Test.IntegrationTests.Abstracts;
 using TaskMaster.Test.IntegrationTests.Data;
-using TaskMaster.API.Models.Dashboard;
 
 namespace TaskMaster.Test.IntegrationTests;
 
@@ -83,19 +84,26 @@ public class DashboardQueryTests : ProviderIntegrationTestBase
             jobs[2].CreatedDateTime = now.AddHours(-4);
             jobs[3].CreatedDateTime = now.AddHours(-30);
             await db.SaveChangesAsync();
+
+            TestContext.WriteLine($"Job Creation: {string.Join("; ", jobs.Select(j => $"{j.Id}, {j.CreatedDateTime.Kind}, {j.CreatedDateTime.ToString()}"))}");
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
         var query = scope.ServiceProvider.GetRequiredService<IDashboardQuery>();
+        var timeZoneToUser = TimeZoneInfo.Local. Id;
+
+        TestContext.WriteLine($"Current server timezone: {timeZoneToUser}");
 
         // Act
-        var response = await query.GetJobStatsAsync("UTC");
+        var response = await query.GetJobStatsAsync(timeZoneToUser);
         var buckets = response.Buckets;
+
+        TestContext.WriteLine($"Buckets: {string.Join("; ", response.Buckets.Select(b => $"{b.BucketStart}, {b.BucketEnd}, {b.JobCount}, {b.Label}"))}");
 
         // Assert
         Assert.Multiple(() =>
         {
-            Assert.That(response.Timezone, Is.EqualTo("UTC"));
+            Assert.That(response.Timezone, Is.EqualTo(timeZoneToUser));
             Assert.That(response.BucketSizeMinutes, Is.EqualTo(120));
             Assert.That(buckets, Has.Count.EqualTo(12), "The 24h window should be split into twelve 2-hour buckets");
 
