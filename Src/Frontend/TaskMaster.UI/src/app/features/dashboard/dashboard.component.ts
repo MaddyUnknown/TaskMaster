@@ -16,7 +16,7 @@ import {
   ChartDataPoint,
   JobsPerHourChartComponent,
 } from './jobs-per-hour-chart/jobs-per-hour-chart.component';
-import { DashboardActivity, SystemHealth, JobStatsItem } from '../../core/models';
+import { DashboardActivity, SystemHealth, JobStatsResponse } from '../../core/models';
 
 export interface DashboardStat {
   label: string;
@@ -96,15 +96,14 @@ export class DashboardComponent implements OnInit {
       this.stats[2].value = m.queuedJobs;
     });
 
-    this.api.getRecentJobStats().subscribe((items: JobStatsItem[]) => {
-      const counts = items.map(i => i.jobCount);
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    this.api.getRecentJobStats(tz).subscribe((res: JobStatsResponse) => {
+      const counts = res.buckets.map(i => i.jobCount);
       const max = Math.max(...counts, 1);
-      this.chartData = items.map(item => ({
+      this.chartData = res.buckets.map(item => ({
         value: item.jobCount,
         height: (item.jobCount / max) * 100,
-        label: item.bucketHour,
-        start: item.bucketStart,
-        end: item.bucketEnd,
+        label: item.label,
       }));
       this.loadingChart = false;
     });

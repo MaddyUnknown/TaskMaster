@@ -11,10 +11,7 @@
           <div class="chart-bar-wrapper">
             <div class="chart-bar" [style.height.%]="item.height"></div>
             <app-tooltip position="bottom" [show]="hoveredIndex === $index">
-              <span class="tooltip-range"
-                >{{ item.start | date: "HH:mm" }} –
-                {{ item.end | date: "HH:mm" }}</span
-              >
+              <span class="tooltip-range">{{ item.label }}</span>
             </app-tooltip>
           </div>
           <span class="chart-label">{{ item.label }}</span>

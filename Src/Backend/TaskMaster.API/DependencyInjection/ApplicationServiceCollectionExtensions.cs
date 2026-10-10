@@ -61,6 +61,7 @@ namespace TaskMaster.API.DependencyInjection
             services.AddTransient<IValidator<CreateJobType>, CreateJobTypeValidator>();
             services.AddTransient<IValidator<RegisterWorker>, RegisterWorkerValidator>();
             services.AddTransient<IValidator<JobTypeRef>, JobTypeRefValidator>();
+            services.AddTransient<IValidator<string>, TimeZoneValidator>();
 
             return services;
         }
