@@ -4,6 +4,8 @@ import { LucideInfo, LucideLogIn, LucideLogOut } from '@lucide/angular';
 import { DialogComponent } from '../../components/dialog/dialog.component';
 import { AUTH_SERVICE, AuthService } from '../../../core/auth/auth.service';
 import { AuthConfigService } from '../../../core/auth/auth-config.service';
+import { AppConfigService } from '../../../core/services/app-config.service';
+import { SystemInfoService } from '../../../core/services/system-info.service';
 import { AsyncPipe } from '@angular/common';
 
 @Component({
@@ -23,11 +25,25 @@ export class HeaderComponent implements OnInit, OnDestroy {
   constructor(
     @Inject(AUTH_SERVICE) private authService: AuthService,
     private authConfigService: AuthConfigService,
+    private appConfigService: AppConfigService,
+    private systemInfoService: SystemInfoService,
   ) {}
 
   ngOnInit() {
     this.authEnabled = this.authConfigService.isAuthEnabled;
     this.isAuthenticated$ = this.authService.isAuthenticated$;
+  }
+
+  get version(): string {
+    return this.systemInfoService.current.version;
+  }
+
+  get environment(): string {
+    return this.systemInfoService.current.environment;
+  }
+
+  get apiEndpoint(): string {
+    return this.appConfigService.apiEndpoint;
   }
 
   ngOnDestroy() {

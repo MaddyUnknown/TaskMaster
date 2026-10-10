@@ -1,7 +1,13 @@
+app-card.dashboard-health {
+  display: block;
+  height: 100%;
+}
+
 .dashboard-health {
   display: flex;
   flex-direction: column;
   flex: 1;
+  height: 100%;
 }
 
 .health-inner {

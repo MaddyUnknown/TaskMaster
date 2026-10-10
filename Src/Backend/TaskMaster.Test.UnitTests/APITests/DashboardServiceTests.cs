@@ -1,9 +1,12 @@
 using Moq;
 using TaskMaster.API.Entities;
 using TaskMaster.API.Enums;
+using TaskMaster.API.Exceptions;
 using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 using TaskMaster.API.Models.Enums;
 using TaskMaster.API.Services;
+using TaskMaster.API.Validation;
 
 namespace TaskMaster.Test.UnitTests.APITests;
 
@@ -11,7 +14,7 @@ public class DashboardServiceTests
 {
     private Mock<IDashboardQuery> _dashboardQuery = null!;
 
-    private DashboardService CreateService() => new(_dashboardQuery.Object);
+    private DashboardService CreateService() => new(_dashboardQuery.Object, new TimeZoneValidator());
 
     [SetUp]
     public void SetupMock()
@@ -196,31 +199,41 @@ public class DashboardServiceTests
     {
         // Arrange
         var now = new DateTime(2026, 7, 11, 12, 0, 0);
-        var expected = new List<JobStatsItem>
+        var expected = new JobStatsResponse
         {
-            new() { BucketStart = now.AddHours(-22), BucketEnd = now.AddHours(-20), BucketHour = "14:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-20), BucketEnd = now.AddHours(-18), BucketHour = "16:00", JobCount = 5 },
-            new() { BucketStart = now.AddHours(-18), BucketEnd = now.AddHours(-16), BucketHour = "18:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-16), BucketEnd = now.AddHours(-14), BucketHour = "20:00", JobCount = 3 },
-            new() { BucketStart = now.AddHours(-14), BucketEnd = now.AddHours(-12), BucketHour = "22:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-12), BucketEnd = now.AddHours(-10), BucketHour = "00:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-10), BucketEnd = now.AddHours(-8), BucketHour = "02:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-8), BucketEnd = now.AddHours(-6), BucketHour = "04:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-6), BucketEnd = now.AddHours(-4), BucketHour = "06:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-4), BucketEnd = now.AddHours(-2), BucketHour = "08:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(-2), BucketEnd = now.AddHours(0), BucketHour = "10:00", JobCount = 0 },
-            new() { BucketStart = now.AddHours(0), BucketEnd = now.AddHours(2), BucketHour = "12:00", JobCount = 0 },
+            Timezone = "UTC",
+            WindowStartUtc = now.AddHours(-22),
+            WindowEndUtc = now.AddHours(2),
+            BucketSizeMinutes = 120,
+            Buckets =
+            [
+                new() { BucketStart = now.AddHours(-22), BucketEnd = now.AddHours(-20), Label = "14:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-20), BucketEnd = now.AddHours(-18), Label = "16:00", JobCount = 5 },
+                new() { BucketStart = now.AddHours(-18), BucketEnd = now.AddHours(-16), Label = "18:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-16), BucketEnd = now.AddHours(-14), Label = "20:00", JobCount = 3 },
+                new() { BucketStart = now.AddHours(-14), BucketEnd = now.AddHours(-12), Label = "22:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-12), BucketEnd = now.AddHours(-10), Label = "00:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-10), BucketEnd = now.AddHours(-8), Label = "02:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-8), BucketEnd = now.AddHours(-6), Label = "04:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-6), BucketEnd = now.AddHours(-4), Label = "06:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-4), BucketEnd = now.AddHours(-2), Label = "08:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(-2), BucketEnd = now.AddHours(0), Label = "10:00", JobCount = 0 },
+                new() { BucketStart = now.AddHours(0), BucketEnd = now.AddHours(2), Label = "12:00", JobCount = 0 },
+            ]
         };
 
-        _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
+        _dashboardQuery.Setup(q => q.GetJobStatsAsync("UTC")).ReturnsAsync(expected);
 
         // Act
-        var result = (await CreateService().GetJobStatsAsync()).ToList();
+        var result = await CreateService().GetJobStatsAsync("UTC");
 
         // Assert
-        Assert.That(result, Has.Count.EqualTo(12));
-        Assert.That(result.Single(i => i.BucketHour == "16:00").JobCount, Is.EqualTo(5));
-        Assert.That(result.Single(i => i.BucketHour == "20:00").JobCount, Is.EqualTo(3));
+        Assert.Multiple(() =>
+        {
+            Assert.That(result.Buckets, Has.Count.EqualTo(12));
+            Assert.That(result.Buckets.Single(i => i.Label == "16:00").JobCount, Is.EqualTo(5));
+            Assert.That(result.Buckets.Single(i => i.Label == "20:00").JobCount, Is.EqualTo(3));
+        });
     }
 
     [Test]
@@ -229,19 +242,37 @@ public class DashboardServiceTests
         // Arrange
         var now = new DateTime(2026, 7, 11, 12, 0, 0);
         var hours = new[] { "14:00", "16:00", "18:00", "20:00", "22:00", "00:00", "02:00", "04:00", "06:00", "08:00", "10:00", "12:00" };
-        var expected = hours.Select((h, i) => new JobStatsItem
+        var expected = new JobStatsResponse
         {
-            BucketStart = now.AddHours(-22 + i * 2),
-            BucketEnd = now.AddHours(-20 + i * 2),
-            BucketHour = h,
-            JobCount = 0
-        }).ToList();
-        _dashboardQuery.Setup(q => q.GetJobStatsAsync()).ReturnsAsync(expected);
+            Timezone = "UTC",
+            WindowStartUtc = now.AddHours(-22),
+            WindowEndUtc = now.AddHours(2),
+            BucketSizeMinutes = 120,
+            Buckets = hours.Select((h, i) => new JobStatsItem
+            {
+                BucketStart = now.AddHours(-22 + i * 2),
+                BucketEnd = now.AddHours(-20 + i * 2),
+                Label = h,
+                JobCount = 0
+            }).ToList()
+        };
+        _dashboardQuery.Setup(q => q.GetJobStatsAsync("Europe/London")).ReturnsAsync(expected);
 
         // Act
-        var result = await CreateService().GetJobStatsAsync();
+        var result = await CreateService().GetJobStatsAsync("Europe/London");
 
         // Assert
-        Assert.That(result.All(i => i.JobCount == 0), Is.True);
+        Assert.That(result.Buckets.All(i => i.JobCount == 0), Is.True);
+    }
+
+    [Test]
+    public void GetJobStatsAsync_WhenTimezoneInvalid_ShouldThrowValidationException()
+    {
+        // Act
+        var ex = Assert.ThrowsAsync<ValidationException>(
+            async () => await CreateService().GetJobStatsAsync("Not/AZone"));
+
+        // Assert
+        Assert.That(ex!.Errors, Has.Count.EqualTo(1));
     }
 }

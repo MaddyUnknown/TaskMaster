@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using TaskMaster.API.Auth;
-using TaskMaster.API.Interfaces.Queries;
 using TaskMaster.API.Interfaces.Services;
 using TaskMaster.API.Models.Common;
 using TaskMaster.API.Models.Dashboard;
@@ -38,10 +37,10 @@ namespace TaskMaster.API.Controllers
 
         [HttpGet("job-stats")]
         [RequirePermission(AuthPermissions.ReadDashboard)]
-        public async Task<ActionResult<ApiResponse<IEnumerable<JobStatsItem>>>> GetJobStats()
+        public async Task<ActionResult<ApiResponse<JobStatsResponse>>> GetJobStats([FromQuery] string? tz = null)
         {
-            var stats = await _dashboardService.GetJobStatsAsync();
-            return Ok(ApiResponse<IEnumerable<JobStatsItem>>.Success(stats));
+            var stats = await _dashboardService.GetJobStatsAsync(string.IsNullOrWhiteSpace(tz) ? "UTC" : tz);
+            return Ok(ApiResponse<JobStatsResponse>.Success(stats));
         }
 
         [HttpGet("health")]

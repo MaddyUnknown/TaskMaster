@@ -32,15 +32,15 @@
   <div class="sysinfo-rows">
     <div class="sysinfo-row">
       <span class="sysinfo-label">Version</span>
-      <span class="sysinfo-value">1.0.0</span>
+      <span class="sysinfo-value">{{ version }}</span>
     </div>
     <div class="sysinfo-row">
       <span class="sysinfo-label">Environment</span>
-      <span class="sysinfo-value">Development</span>
+      <span class="sysinfo-value">{{ environment }}</span>
     </div>
     <div class="sysinfo-row">
       <span class="sysinfo-label">API Endpoint</span>
-      <span class="sysinfo-value code">http://localhost:5000</span>
+      <span class="sysinfo-value code">{{ apiEndpoint }}</span>
     </div>
   </div>
 </app-dialog>

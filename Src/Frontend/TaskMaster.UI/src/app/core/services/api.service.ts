@@ -17,7 +17,7 @@ import {
   ActivityType,
   DashboardActivity,
   EntityType,
-  JobStatsItem,
+  JobStatsResponse,
   HealthStatus,
   SystemHealth,
   SystemMetrics,
@@ -27,6 +27,7 @@ import {
   JobCounts,
   WorkerCounts,
 } from '../models';
+import { AppConfigService } from './app-config.service';
 
 interface ApiResponse<T> {
   isSuccess: boolean;
@@ -102,8 +103,16 @@ interface BackendSystemHealth {
 interface BackendJobStatsItem {
   bucketStart: string;
   bucketEnd: string;
-  bucketHour: string;
+  label: string;
   jobCount: number;
+}
+
+interface BackendJobStatsResponse {
+  timezone: string;
+  windowStartUtc: string;
+  windowEndUtc: string;
+  bucketSizeMinutes: number;
+  buckets: BackendJobStatsItem[];
 }
 
 interface BackendPagedResult<T> {
@@ -144,7 +153,12 @@ interface WorkerPage {
 export class ApiService {
   private baseUrl = '/api';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private http: HttpClient,
+    appConfigService: AppConfigService,
+  ) {
+    this.baseUrl = appConfigService.current.apiBaseUrl;
+  }
 
   private mapJob(j: BackendJob): Job {
     return {
@@ -363,12 +377,27 @@ export class ApiService {
       );
   }
 
-  getRecentJobStats(): Observable<JobStatsItem[]> {
+  getRecentJobStats(tz: string): Observable<JobStatsResponse> {
+    const params = new HttpParams().set('tz', tz);
     return this.http
-      .get<
-        ApiResponse<BackendJobStatsItem[]>
-      >(`${this.baseUrl}/dashboard/job-stats`)
-      .pipe(map((res) => res.data));
+      .get<ApiResponse<BackendJobStatsResponse>>(
+        `${this.baseUrl}/dashboard/job-stats`,
+        { params },
+      )
+      .pipe(
+        map((res) => ({
+          timezone: res.data.timezone,
+          windowStartUtc: res.data.windowStartUtc,
+          windowEndUtc: res.data.windowEndUtc,
+          bucketSizeMinutes: res.data.bucketSizeMinutes,
+          buckets: res.data.buckets.map((b) => ({
+            bucketStart: b.bucketStart,
+            bucketEnd: b.bucketEnd,
+            label: b.label,
+            jobCount: b.jobCount,
+          })),
+        })),
+      );
   }
 
   getSystemMetrics(): Observable<SystemMetrics> {

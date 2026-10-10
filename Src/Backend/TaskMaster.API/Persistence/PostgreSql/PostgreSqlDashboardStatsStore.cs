@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskMaster.API.Enums;
 using TaskMaster.API.Interfaces.Data;
 using TaskMaster.API.Interfaces.Persistence;
-using TaskMaster.API.Interfaces.Queries;
+using TaskMaster.API.Models.Dashboard;
 
 namespace TaskMaster.API.Persistence.PostgreSql
 {
@@ -51,69 +51,36 @@ namespace TaskMaster.API.Persistence.PostgreSql
             }
         }
 
-        public async Task<IEnumerable<JobStatsItem>> GetHourlyJobStatsAsync(CancellationToken cancellationToken = default)
+        public async Task<JobStatsResponse> GetHourlyJobStatsAsync(string timeZone, CancellationToken cancellationToken = default)
         {
-            var raw = await _context.Database.SqlQuery<HourlyCount>($@"
-                WITH RECURSIVE Params AS
-                (
-                    SELECT
-                        DATE_TRUNC('hour', CURRENT_TIMESTAMP)
-                        - (EXTRACT(hour FROM CURRENT_TIMESTAMP)::int % 2) * INTERVAL '1 hour'
-                        AS ""CurrentBucketStart""
-                ),
-                Buckets AS
-                (
-                     SELECT
-                        ""CurrentBucketStart"" - INTERVAL '22 hours' AS ""BucketStart""
-                    FROM Params
+            var timeZoneInfo = TimeZoneInfo.FindSystemTimeZoneById(timeZone);
+            var nowUtc = DateTime.UtcNow;
+            var buckets = JobStatsBucketer.CreateBuckets(timeZoneInfo, nowUtc);
+            var starts = buckets.Select(b => b.BucketStart).ToArray();
+            var ends = buckets.Select(b => b.BucketEnd).ToArray();
 
-                    UNION ALL
+            var raw = await _context.Database
+                .SqlQuery<BucketCount>(
+                    $@"SELECT
+                            b.""BucketIndex"" - 1 AS ""BucketIndex"",
+                            COUNT(j.""Id"")::int AS ""JobCount""
+                        FROM unnest({starts}, {ends}) WITH ORDINALITY AS b(""StartUtc"", ""EndUtc"", ""BucketIndex"")
+                        LEFT JOIN ""Jobs"" j
+                            ON j.""CreatedDateTime"" >= b.""StartUtc""
+                            AND j.""CreatedDateTime"" < b.""EndUtc""
+                        GROUP BY b.""BucketIndex""
+                        ORDER BY b.""BucketIndex"";")
+                .ToListAsync(cancellationToken);
 
-                    SELECT
-                        b.""BucketStart"" + INTERVAL '2 hours'
-                    FROM Buckets b
-                    CROSS JOIN Params p
-                    WHERE b.""BucketStart"" < p.""CurrentBucketStart""
-                ),
-                JobCounts AS
-                (
-                    SELECT
-                        DATE_TRUNC('hour', j.""CreatedDateTime"") - (EXTRACT(hour FROM j.""CreatedDateTime"")::int % 2) * INTERVAL '1 hour' AS ""BucketStart"",
-                        COUNT(*) AS ""JobCount""
-                    FROM ""Jobs"" j
-                    CROSS JOIN Params p
-                    WHERE
-                        j.""CreatedDateTime"" >= p.""CurrentBucketStart"" - INTERVAL '22 hours'
-                        AND j.""CreatedDateTime"" < CURRENT_TIMESTAMP
-                    GROUP BY
-                        DATE_TRUC('hour', j.""CreatedDateTime"")
-                        - (EXTRACT(hour FROM j.""CreatedDateTime"")::int % 2) * INTERVAL '1 hour'
-                )
-                SELECT
-                    b.""BucketStart"",
-                    b.""BucketStart"" + INTERVAL '2 hours' ""BucketEnd"",
-                    TO_CHAR(b.""BucketStart"", 'HH24:MI') AS ""BucketHour"",
-                    COALESCE(j.JobCount, 0) AS ""JobCount""
-                FROM Buckets b
-                LEFT JOIN JobCounts j
-                    ON b.""BucketStart"" = j.""BucketStart""
-                ORDER BY b.""BucketStart"";"
-            ).ToListAsync(cancellationToken);
-
-            return raw.Select(r => new JobStatsItem
-            {
-                BucketStart = r.BucketStart,
-                BucketEnd = r.BucketEnd,
-                BucketHour = r.BucketHour,
-                JobCount = r.JobCount
-            });
+            return JobStatsBucketer.BuildResponse(
+                buckets,
+                raw.ToDictionary(r => r.BucketIndex, r => r.JobCount),
+                timeZoneInfo);
         }
 
-        private sealed class HourlyCount
+        private sealed class BucketCount
         {
-            public DateTime BucketStart { get; set; }
-            public DateTime BucketEnd { get; set; }
-            public string BucketHour { get; set; } = string.Empty;
+            public int BucketIndex { get; set; }
             public int JobCount { get; set; }
         }
 
