@@ -62,7 +62,7 @@ namespace TaskMaster.API.Persistence.PostgreSql
             var raw = await _context.Database
                 .SqlQuery<BucketCount>(
                     $@"SELECT
-                            b.""BucketIndex"" AS ""BucketIndex"",
+                            b.""BucketIndex"" - 1 AS ""BucketIndex"",
                             COUNT(j.""Id"")::int AS ""JobCount""
                         FROM unnest({starts}, {ends}) WITH ORDINALITY AS b(""StartUtc"", ""EndUtc"", ""BucketIndex"")
                         LEFT JOIN ""Jobs"" j

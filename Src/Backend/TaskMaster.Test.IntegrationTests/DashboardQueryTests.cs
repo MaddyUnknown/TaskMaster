@@ -84,21 +84,15 @@ public class DashboardQueryTests : ProviderIntegrationTestBase
             jobs[2].CreatedDateTime = now.AddHours(-4);
             jobs[3].CreatedDateTime = now.AddHours(-30);
             await db.SaveChangesAsync();
-
-            TestContext.WriteLine($"Job Creation: {string.Join("; ", jobs.Select(j => $"{j.Id}, {j.CreatedDateTime.Kind}, {j.CreatedDateTime.ToString()}"))}");
         });
 
         await using var scope = ServiceProvider.CreateAsyncScope();
         var query = scope.ServiceProvider.GetRequiredService<IDashboardQuery>();
         var timeZoneToUser = TimeZoneInfo.Local. Id;
 
-        TestContext.WriteLine($"Current server timezone: {timeZoneToUser}");
-
         // Act
         var response = await query.GetJobStatsAsync(timeZoneToUser);
         var buckets = response.Buckets;
-
-        TestContext.WriteLine($"Buckets: {string.Join("; ", response.Buckets.Select(b => $"{b.BucketStart}, {b.BucketEnd}, {b.JobCount}, {b.Label}"))}");
 
         // Assert
         Assert.Multiple(() =>
