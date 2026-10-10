@@ -1,7 +1,13 @@
+app-card.dashboard-activity {
+  display: block;
+  height: 100%;
+}
+
 .activity-list {
   display: flex;
   flex-direction: column;
   max-height: var(--app-recent-activity-list-max-height);
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
 }

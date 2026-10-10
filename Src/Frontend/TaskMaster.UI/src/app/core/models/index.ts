@@ -4,4 +4,5 @@ export * from './dashboard.model';
 export * from './job-type.model';
 export * from './job.model';
 export * from './pagination.model';
+export * from './system-info.model';
 export * from './worker.model';

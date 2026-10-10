@@ -14,15 +14,18 @@ import {
 
 import { getRoutes } from './app.routes';
 import { AppConfigService } from './core/services/app-config.service';
+import { SystemInfoService } from './core/services/system-info.service';
 import { AuthConfigService } from './core/auth/auth-config.service';
 import { AuthConfig } from './core/models';
 import { AppConfig } from './core/models';
+import { SystemInfo } from './core/models';
 import { createAuthDependency } from './core/auth/auth-dependency.factory';
 import { AUTH_SERVICE } from './core/auth/auth.service';
 
 export function appConfig(
   appConfig: AppConfig,
   authConfig: AuthConfig,
+  systemInfo: SystemInfo,
 ): ApplicationConfig {
   const authDependency = createAuthDependency(authConfig);
 
@@ -40,11 +43,13 @@ export function appConfig(
         provide: APP_INITIALIZER,
         useFactory: () => {
           const appConfigService = inject(AppConfigService);
+          const systemInfoService = inject(SystemInfoService);
           const authConfigService = inject(AuthConfigService);
           const auth = inject(AUTH_SERVICE);
 
           return () => {
             appConfigService.load(appConfig);
+            systemInfoService.load(systemInfo);
             authConfigService.load(authConfig);
 
             return auth.init();
