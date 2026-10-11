@@ -203,4 +203,4 @@ jobs:
             TaskMaster.Library.Producer.${VERSION}.nupkg \
             TaskMaster.Library.Producer.${VERSION}.snupkg \
             --title "TaskMaster ${VERSION}" \
-            --notes-file "TaskMaster.Mainfest.${VERSION}.md"
+            --notes-file "TaskMaster.Manifest.${VERSION}.md"
