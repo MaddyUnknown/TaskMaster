@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+	<IsPackable>true</IsPackable>
+	<PackageId>TaskMaster.Library.Consumer</PackageId>
+	<Description>TaskMaster Consumer SDK - Validate and submit jobs to Taskmaster CoordinatorAPI</Description>
+	<PackageTags>taskmaster;consumer;library;sdk</PackageTags>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>

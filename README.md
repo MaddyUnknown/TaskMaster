@@ -20,6 +20,11 @@ Src/
     TaskMaster.Library.Consumer/      - SDK for building workers
     TaskMaster.Test.UnitTests/
     TaskMaster.Test.IntegrationTests/
+    Samples/
+      TaskMaster.Sample.Producer/     - Minimal Producer SDK sample
+      TaskMaster.Sample.Consumer/     - Minimal Consumer SDK sample
+      TaskMaster.Demo.Web/            - External demo web app (uses the Producer SDK)
+      TaskMaster.Demo.Consumer/       - External demo worker (uses the Consumer SDK)
   Frontend/
     TaskMaster.UI/                    - Angular SPA dashboard
 ```
@@ -41,6 +46,10 @@ Client SDK for creating and submitting jobs to the API. Validates payloads again
 ### Library.Consumer
 
 Worker SDK for building worker agents that pull queued jobs, dispatch them to registered handlers, and report completion or failure.
+
+### Samples & Demo
+
+`Src/Backend/Samples` holds two minimal SDK samples (`TaskMaster.Sample.Producer`, `TaskMaster.Sample.Consumer`) and a complete external demo (`TaskMaster.Demo.Web` + `TaskMaster.Demo.Consumer`) in which a separate codebase submits a synthetic report job and processes it end to end. See [`Src/Backend/Samples/README.md`](Src/Backend/Samples/README.md).
 
 ## Getting Started
 
@@ -111,13 +120,13 @@ that neither context has drifted from its model.
 
 ##### Running the integration tests
 
-The suite targets one engine per run, chosen by the `TASKMASTER_TEST_PROVIDER` environment
-variable, and reads its connection string from `ConnectionStrings:SqlServerTesting` or
-`ConnectionStrings:PostgreSqlTesting`. If the selected engine is not configured the tests are
-skipped rather than failed.
+The suite targets one engine per run, chosen by `Database:Provider` (override with the
+`Database__Provider` environment variable), and reads its connection string from
+`ConnectionStrings:SqlServerTesting` or `ConnectionStrings:PostgreSqlTesting`. If the selected
+engine's connection string is not configured the tests are skipped rather than failed.
 
 ```powershell
-$env:TASKMASTER_TEST_PROVIDER = "PostgreSql"
+$env:Database__Provider = "PostgreSql"
 dotnet test Src/Backend/TaskMaster.Test.IntegrationTests
 ```
 
@@ -143,13 +152,13 @@ API requests proxied to `https://localhost:7143` in dev mode.
 - Angular SPA dashboard with job/worker browsing, detail views, charts, and job type management
 - Structured logging with Serilog and correlation IDs
 - Global exception handling and explicit input validation
+- Pluggable authentication (`Auth:Mode` = `None` | `Oidc`) with scope-based authorization, client-credentials SDK auth, and an anonymous `/api/auth/config` endpoint
 - Unit tests (NUnit + Moq) and integration tests (NUnit + real database) run against both SQL Server and PostgreSQL
 - GitHub Actions CI pipeline with a matrix over both database providers
 
 ## Future of the Project
 
 - Containerisation - Dockerise the API and UI for easy reuse by other developers. Ship SDKs as NuGet packages.
-- Authentication - Optional OAuth provider configuration for secured deployments.
 - API Caching - Response caching layer to reduce database load.
 - Long Polling - Replace iterative polling with long polling for job pull, using a common channel to coordinate worker waiting and job queuing across multi-server deployments.
 - Real-Time Updates - SignalR integration for live dashboard updates (job status changes, worker activity).
