@@ -53,92 +53,186 @@ Worker SDK for building worker agents that pull queued jobs, dispatch them to re
 
 ## Getting Started
 
-### Backend
+Grab the latest [release](../../releases). The .NET apps are framework-dependent, so you need the
+**.NET 8 runtime** on the host, not the SDK. The dashboard is prebuilt; no Node or Angular tooling
+is required.
+
+| Release asset | What it is |
+| --- | --- |
+| `TaskMaster.Coordinator.API.<version>.zip` | The API |
+| `TaskMaster.UI.<version>.zip` | Static dashboard files |
+| `TaskMaster.Library.Producer/Consumer/Common.<version>.nupkg` | SDK packages for your own apps |
+| `TaskMaster.Demo.Web/Consumer.<version>.zip` | External demo (see [`Src/Backend/Samples/README.md`](Src/Backend/Samples/README.md)) |
+
+### Run the API
+
+Unzip, set the connection string in `appsettings.json`, then start it:
+
+```powershell
+dotnet TaskMaster.API.dll
+```
+
+Migrations run on startup, so a fresh database is ready immediately. Swagger is at
+`/swagger/index.html` in Development.
+
+Set the listen address with `ASPNETCORE_URLS`, the `Urls` key, or a Kestrel endpoint in
+`appsettings.json`:
+
+```json
+{
+  "Kestrel": {
+    "Endpoints": {
+      "Http": { "Url": "https://localhost:7143" }
+    }
+  }
+}
+```
+
+### Configuration
+
+Required:
+
+| Key | Notes |
+| --- | --- |
+| `ConnectionStrings:DefaultConnection` | Your database connection string |
+| `Database:Provider` | `SqlServer` (default) or `PostgreSql` |
+
+Optional:
+
+| Key | Default | Notes |
+| --- | --- | --- |
+| `Database:AutoMigrate` | `true` | Set `false` when migrations are applied out of band |
+| `Auth:Mode` | `None` | `Oidc` to require bearer tokens |
+| `Auth:Oidc:Authority` | none | Required when `Auth:Mode=Oidc` |
+| `Auth:Oidc:Audience` | none | Optional audience check |
+| `Auth:Oidc:ScopeClaim` | `scope` | Ships blank in `appsettings.json`; set it or authorization fails |
+| `WorkerConfig:HeartBeatIntervalSeconds` | `10` | Returned to workers at registration |
+| `WorkerConfig:WorkerExpiryIntervalSeconds` | `30` | Workers silent this long are expired |
+
+Secrets belong in environment variables (`__` separator) or user-secrets. Logging is configured
+under `Serilog` (console plus a daily rolling file). Timestamps are stored and compared in UTC on
+both providers.
+
+### Authentication
+
+`Auth:Mode=None` (the default) treats every request as a user holding all permissions. Use it for
+local development, or in a closed environment where the API is not reachable publicly.
+
+`Auth:Mode=Oidc` requires a JWT bearer token and maps OIDC scopes to TaskMaster permissions:
+
+| Scope | Permission |
+| --- | --- |
+| `jobs:create` | `job.create` |
+| `jobs:read`, `jobs:stats` | `job.read`, `job.stats` |
+| `jobs:pull`, `jobs:report` | `job.pull`, `job.report` |
+| `workers:read`, `workers:stats` | `worker.read`, `worker.stats` |
+| `workers:register`, `workers:heartbeat`, `workers:remove` | matching `worker.*` permissions |
+| `jobtypes:read`, `jobtypes:create` | `jobtype.read`, `jobtype.create` |
+| `dashboard:read` | `dashboard.read` |
+
+`GET /api/auth/config` is anonymous and reports the active mode.
+
+### Dashboard
+
+Serve the files from `TaskMaster.UI.<version>.zip` with any static host. `app-config.json` sets
+`apiBaseUrl` (`/api` by default) and the OIDC `clientId` and redirect URIs for browser login.
+
+## Producer & Consumer SDKs
+
+Reference the `TaskMaster.Library.Producer` and `TaskMaster.Library.Consumer` packages (both .NET
+8). They attach to each GitHub release; add them as a local NuGet source or reference the `.nupkg`
+directly. They talk to the API over HTTP and need no database access.
+
+Register the job type once. It is a name, a version and a JSON Schema, and the Producer validates
+every payload against the schema before sending (needs `jobtypes:create`):
+
+```bash
+curl -X POST https://localhost:7143/api/job-types \
+  -H "Content-Type: application/json" \
+  -d '{"name":"sample-message","version":1,"schema":"{\"type\":\"object\",\"properties\":{\"Message\":{\"type\":\"string\"}},\"required\":[\"Message\"]}"}'
+```
+
+You can also register it from the dashboard's Job Types page.
+
+Producer:
+
+```csharp
+[JobType("sample-message", 1)]   // TaskMaster.Library.Producer.Attributes
+public sealed class SamplePayload { public string Message { get; set; } = ""; }
+
+services.AddTaskMasterProducer(o =>
+{
+    o.ApiBaseUrl = "https://localhost:7143";
+    // omit Oidc when Auth:Mode=None
+    o.Auth.Oidc = new TaskMasterProducerOidcAuthOptions { ClientId = "...", ClientSecret = "..." };
+});
+
+await producer.ProduceAsync(new SamplePayload { Message = "hello" });
+```
+
+Consumer:
+
+```csharp
+[JobType("sample-message", 1)]   // TaskMaster.Library.Consumer.Attributes
+public sealed record SamplePayload(string Message);
+
+public class SampleHandler : IJobHandler<SamplePayload>
+{
+    public Task HandleAsync(SamplePayload payload) => Task.CompletedTask;
+}
+
+services.AddTaskMasterConsumer(o => { o.ApiBaseUrl = "https://localhost:7143"; });
+
+var worker = factory.CreateWorker("my-worker", c => c.Handle<SamplePayload, SampleHandler>());
+await worker.RunAsync(cancellationToken);
+```
+
+The Consumer SDK handles worker registration, job polling, heartbeats and batched status reporting.
+Optional tuning: `MaxConcurrentHandlers` (5), `PrefetchJobPerHandler` (1), `MaxResultRetries` (5),
+`PollingWaitIntervalMs` (500).
+
+Scopes: producer needs `jobs:create jobtypes:read`; consumer needs `jobs:pull jobs:report
+workers:register workers:heartbeat workers:remove jobtypes:read`.
+
+Working examples live in `Src/Backend/Samples/TaskMaster.Sample.Producer` and
+`TaskMaster.Sample.Consumer` (they read `TASKMASTER_CLIENT_ID` / `TASKMASTER_CLIENT_SECRET`). For
+a complete Producer + Consumer + shared-storage walkthrough, see
+[`Src/Backend/Samples/README.md`](Src/Backend/Samples/README.md).
+
+## Building from Source
+
+For contributors. Requires the .NET 8 SDK, Node.js 22 and a database.
 
 ```powershell
 dotnet build Src\Backend\TaskMaster.sln
-dotnet run --project Src\Backend\TaskMaster.API
+dotnet run --project Src\Backend\TaskMaster.API --launch-profile https
 ```
 
-Swagger UI available at `/swagger/index.html`.
+`--launch-profile https` binds `https://localhost:7143`; the default `http` profile binds
+`http://localhost:5238`. For the dashboard, run `npm ci` then `npm run start` in
+`Src\Frontend\TaskMaster.UI` (dev requests proxy to `https://localhost:7143`).
 
-#### Database Configuration
+### Migrations
 
-The database engine is selected at startup. Only two settings are needed:
-
-| Setting                            | Values                       | Default     |
-| ---------------------------------- | ---------------------------- | ----------- |
-| `Database:Provider`                | `SqlServer`, `PostgreSql`    | `SqlServer` |
-| `Database:AutoMigrate`             | `true`, `false`              | `true`      |
-| `ConnectionStrings:DefaultConnection` | Engine-specific connection string | —     |
-
-`Database:Provider` lives in `TaskMaster.API/appsettings.json`; keep the connection string in
-User Secrets rather than committing it:
+Each engine keeps its own migration set, so `--context` is always required:
 
 ```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=(localdb)\mssqllocaldb;Database=TaskMaster;Trusted_Connection=True;" --project Src/Backend/TaskMaster.API
-```
-
-PostgreSQL example:
-
-```powershell
-dotnet user-secrets set "Database:Provider" "PostgreSql" --project Src/Backend/TaskMaster.API
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Database=TaskMaster;Username=postgres;Password=postgres" --project Src/Backend/TaskMaster.API
-```
-
-All timestamps are stored and compared in UTC. On PostgreSQL the columns are `timestamp with
-time zone`, so the same code behaves identically on both engines.
-
-##### Automatic migrations
-
-On startup the API applies any pending migrations for the selected engine, before it begins
-serving requests and before the background services start. It is provider neutral: whichever
-context `Database:Provider` selected applies its own migration set. A fresh or out-of-date
-database is therefore ready without running `dotnet ef database update` by hand, and a failed
-migration stops startup rather than surfacing later as request-time errors.
-
-Set `Database:AutoMigrate` to `false` to disable this when migrations are applied out of band
-(for example by a deployment step or container entrypoint). When several replicas start at
-once, prefer applying migrations once and setting this to `false`, so the replicas only read the
-schema.
-
-##### Migrations
-
-Each engine has its own migration set that must be kept in step with the other. The assembly
-contains two design-time factories, so `--context` is always required:
-
-```powershell
-# SQL Server -> Migrations/SqlServer
 dotnet ef migrations add <Name> --context SqlServerDbContext --output-dir Migrations/SqlServer --project Src/Backend/TaskMaster.API
-
-# PostgreSQL -> Migrations/Npgsql
 dotnet ef migrations add <Name> --context NpgsqlDbContext --output-dir Migrations/Npgsql --project Src/Backend/TaskMaster.API
 ```
 
-`dotnet ef database update` applies migrations for whichever engine is configured. CI verifies
-that neither context has drifted from its model.
+CI verifies that neither context has drifted from its model.
 
-##### Running the integration tests
+### Integration Tests
 
-The suite targets one engine per run, chosen by `Database:Provider` (override with the
-`Database__Provider` environment variable), and reads its connection string from
-`ConnectionStrings:SqlServerTesting` or `ConnectionStrings:PostgreSqlTesting`. If the selected
-engine's connection string is not configured the tests are skipped rather than failed.
+The suite targets one engine per run, chosen by `Database:Provider` (override with
+`Database__Provider`), and reads `ConnectionStrings:SqlServerTesting` or
+`ConnectionStrings:PostgreSqlTesting`. Without a connection string the tests skip rather than fail.
 
 ```powershell
 $env:Database__Provider = "PostgreSql"
 dotnet test Src/Backend/TaskMaster.Test.IntegrationTests
 ```
-
-### Frontend
-
-```powershell
-cd Src\Frontend\TaskMaster.UI
-npm install
-ng serve
-```
-
-API requests proxied to `https://localhost:7143` in dev mode.
 
 ## What Has Been Achieved
 
