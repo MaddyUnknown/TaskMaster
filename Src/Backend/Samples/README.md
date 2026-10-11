@@ -106,6 +106,10 @@ Src/Backend/Samples/
 └── TaskMaster.Demo.Consumer    # Console worker (Consumer SDK handler)
 ```
 
+> `Src/Backend/Samples` also contains two unrelated SDK samples — `TaskMaster.Sample.Producer`
+> and `TaskMaster.Sample.Consumer`, minimal console apps demonstrating the Producer/Consumer
+> SDKs directly. They are independent of the demo and share none of its code.
+
 The two projects share **no code project on purpose.** The entity, `DbContext`
 and file store exist as two copies (§6, §7) — see
 [Docs/TaskMaster-Demo-Agent.md](../../../Docs/TaskMaster-Demo-Agent.md) for the

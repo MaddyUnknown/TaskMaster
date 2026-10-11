@@ -1,4 +1,4 @@
-name: Release
+0name: Release
 
 on:
   workflow_dispatch:
@@ -27,6 +27,9 @@ jobs:
       DOTNET_CONFIGURATION: Release
       
       TASKMASTER_COORDINATOR_API_PROJECT: Src/Backend/TaskMaster.API/TaskMaster.API.csproj
+      TASKMASTER_LIBRARY_COMMON: Src/Backend/TaskMaster.Library.Common/TaskMaster.Library.Common.csproj
+      TASKMASTER_LIBRARY_CONSUMER: Src/Backend/TaskMaster.Library.Consumer/TaskMaster.Library.Consumer.csproj
+      TASKMASTER_LIBRARY_PRODUCER: Src/Backend/TaskMaster.Library.Producer/TaskMaster.Library.Producer.csproj
       DEMO_WEB_PROJECT: Src/Backend/Samples/TaskMaster.Demo.Web/TaskMaster.Demo.Web.csproj
       DEMO_CONSUMER_PROJECT: Src/Backend/Samples/TaskMaster.Demo.Consumer/TaskMaster.Demo.Consumer.csproj
 
@@ -59,14 +62,14 @@ jobs:
       - name: Package Taskmaster UI
         shell: bash
         run: |
-          mkdir -p release/taskmaster_ui
-          cp -R Src/Frontend/TaskMaster.UI/dist/frontend/. release/taskmaster_ui/
+          mkdir -p release/taskmaster-ui
+          cp -R Src/Frontend/TaskMaster.UI/dist/frontend/. release/taskmaster-ui/
 
       - name: Archive Taskmaster UI
         shell: bash
         run: |
           cd release
-          zip -r "../TaskMaster-UI-${VERSION}.zip" taskmaster_ui
+          zip -r "../TaskMaster.UI.${VERSION}.zip" taskmaster-ui
 
       # ------------------------------------------------------------------------------------------------------------------------------
       # Backend
@@ -86,7 +89,7 @@ jobs:
         run: dotnet restore Src/Backend/TaskMaster.sln
 
       - name: Publish Taskmaster Coordinator API
-        run: dotnet publish "${TASKMASTER_COORDINATOR_API_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/taskmaster_coordinator_api" --no-self-contained
+        run: dotnet publish "${TASKMASTER_COORDINATOR_API_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/taskmaster-coordinator-api" --no-self-contained
 
       - name: Publish Demo Web
         run: dotnet publish "${DEMO_WEB_PROJECT}" --configuration "${DOTNET_CONFIGURATION}" --no-restore --output "release/demo-web" --no-self-contained
@@ -97,17 +100,26 @@ jobs:
       - name: Archive Taskmaster Coordinator API
         run: |
           cd release
-          zip -r "../TaskMaster-Coordinator-API-${VERSION}.zip" taskmaster_coordinator_api
+          zip -r "../TaskMaster.Coordinator.API.${VERSION}.zip" taskmaster-coordinator-api
 
       - name: Archive Taskmaster Demo Web
         run: |
           cd release
-          zip -r "../TaskMaster-Demo-Web-${VERSION}.zip" demo-web
+          zip -r "../TaskMaster.Demo.Web.${VERSION}.zip" demo-web
 
       - name: Archive Taskmaster Demo Consumer
         run: |
           cd release
-          zip -r "../TaskMaster-Demo-Consumer-${VERSION}.zip" demo-consumer
+          zip -r "../TaskMaster.Demo.Consumer.${VERSION}.zip" demo-consumer
+          
+      - name: Pack Common Library
+        run: dotnet pack "${TASKMASTER_LIBRARY_COMMON}" --configuration "${DOTNET_CONFIGURATION}" --no-restore -p:VERSION=${VERSION} --output "./"
+        
+      - name: Pack Producer Library
+        run: dotnet pack "${TASKMASTER_LIBRARY_PRODUCER}" --configuration "${DOTNET_CONFIGURATION}" --no-restore -p:VERSION=${VERSION} --output "./"
+      
+      - name: Pack Consumer Library
+        run: dotnet pack "${TASKMASTER_LIBRARY_CONSUMER}" --configuration "${DOTNET_CONFIGURATION}" --no-restore -p:VERSION=${VERSION} --output "./"
 
       # ====================================================================
       # Release manifest
@@ -116,7 +128,7 @@ jobs:
       - name: Generate Release Manifest
         shell: bash
         run: |
-          cat > "TaskMaster-${VERSION}-manifest.md" <<EOF
+          cat > "TaskMaster.Manifest.${VERSION}.md" <<EOF
           # TaskMaster Release ${VERSION}
 
           ## Runtime
@@ -125,10 +137,17 @@ jobs:
 
           ## Deployables
 
-          - \`TaskMaster-Coordinator-API-${VERSION}.zip\`
-          - \`TaskMaster-Demo-Web-${VERSION}.zip\`
-          - \`TaskMaster-Demo-Consumer-${VERSION}.zip\`
-          - \`TaskMaster-UI-${VERSION}.zip\`
+          - \`TaskMaster.Coordinator.API.${VERSION}.zip\`
+          - \`TaskMaster.Demo.Web.${VERSION}.zip\`
+          - \`TaskMaster.Demo.Consumer.${VERSION}.zip\`
+          - \`TaskMaster.UI.${VERSION}.zip\`
+          - \`TaskMaster.Library.Common.${VERSION}.nupkg\`
+          - \`TaskMaster.Library.Common.${VERSION}.snupkg\`
+          - \`TaskMaster.Library.Consumer.${VERSION}.nupkg\`
+          - \`TaskMaster.Library.Consumer.${VERSION}.snupkg\`
+          - \`TaskMaster.Library.Producer.${VERSION}.nupkg\`
+          - \`TaskMaster.Library.Producer.${VERSION}.snupkg\`
+          
 
           ## Deployment
 
@@ -173,9 +192,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "v${VERSION}" \
-            TaskMaster-UI-${VERSION}.zip \
-            TaskMaster-Coordinator-API-${VERSION}.zip \
-            TaskMaster-Demo-Web-${VERSION}.zip \
-            TaskMaster-Demo-Consumer-${VERSION}.zip \
+            TaskMaster.UI.${VERSION}.zip \
+            TaskMaster.Coordinator.API.${VERSION}.zip \
+            TaskMaster.Demo.Web.${VERSION}.zip \
+            TaskMaster.Demo.Consumer.${VERSION}.zip \
+            TaskMaster.Library.Common.${VERSION}.nupkg \
+            TaskMaster.Library.Common.${VERSION}.snupkg \
+            TaskMaster.Library.Consumer.${VERSION}.nupkg \
+            TaskMaster.Library.Consumer.${VERSION}.snupkg \
+            TaskMaster.Library.Producer.${VERSION}.nupkg \
+            TaskMaster.Library.Producer.${VERSION}.snupkg \
             --title "TaskMaster ${VERSION}" \
-            --notes-file "TaskMaster-${VERSION}-manifest.md"
+            --notes-file "TaskMaster.Mainfest.${VERSION}.md"
