@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <Authors>MaddyUnknown</Authors>
+    <RepositoryUrl>https://github.com/MaddyUnknown/TaskMaster</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageProjectUrl>https://github.com/MaddyUnknown/TaskMaster</PackageProjectUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+</Project>

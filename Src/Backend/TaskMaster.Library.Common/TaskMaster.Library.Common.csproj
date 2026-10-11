@@ -1,6 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+	<IsPackable>true</IsPackable>
+	<PackageId>TaskMaster.Library.Common</PackageId>
+	<Description>TaskMaster Common Library - Common utilities and shared components for Producer and Consumer SDK</Description>
+	<PackageTags>taskmaster;library;common</PackageTags>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
