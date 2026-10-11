@@ -69,7 +69,7 @@ input[type="range"] { width: 100%; }
 }
 .btn.primary { width: 100%; margin-top: 18px; padding: 12px; font-size: 15px; }
 .btn.primary:hover { background: var(--accent-dark); }
-.btn.small { padding: 7px 14px; font-size: 13px; }
+.btn.small { padding: 12px 14px; margin-top: 12px; font-size: 13px; }
 .btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text); }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
 
